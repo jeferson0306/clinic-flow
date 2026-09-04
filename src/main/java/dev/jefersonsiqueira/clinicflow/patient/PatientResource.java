@@ -105,7 +105,7 @@ public class PatientResource {
               + "Shaped by RESTEasy Reactive, not this API's own error format; see ProcedureResource's note.")
   @APIResponse(
       responseCode = "422",
-      description = "brdoc rejected a document. `field` names which one.",
+      description = "brdoc rejected a document. `field` names which one. Shown here are the two fields that vary by situation; every error additionally carries category, traceId, timestamp and path — see PatientResource's 404 example for the complete shape.",
       content =
           @Content(
               examples =
@@ -115,7 +115,7 @@ public class PatientResource {
                           {"field": "cpf", "message": "Invalid CPF format"}""")))
   @APIResponse(
       responseCode = "409",
-      description = "A patient with this CPF is already registered.",
+      description = "A patient with this CPF is already registered. Shown here are the two fields that vary by situation; every error additionally carries category, traceId, timestamp and path — see PatientResource's 404 example for the complete shape.",
       content =
           @Content(
               examples =
@@ -160,7 +160,26 @@ public class PatientResource {
                             },
                             "createdAt": "2026-09-04T14:41:46.722547Z"
                           }""")))
-  @APIResponse(responseCode = "404", description = "No patient with this id")
+  @APIResponse(
+      responseCode = "404",
+      description =
+          "No patient with this id. Every 404 across this API has this same shape — "
+              + "field is always null here, only message, category, traceId, timestamp and path matter.",
+      content =
+          @Content(
+              examples =
+                  @ExampleObject(
+                      name = "404",
+                      value =
+                          """
+                          {
+                            "field": null,
+                            "message": "Not found",
+                            "category": "NOT_FOUND",
+                            "traceId": "579976bbc70bd7971cd94fc6786cc105",
+                            "timestamp": "2026-09-04T18:47:41.112383Z",
+                            "path": "/v1/patients/00000000-0000-0000-0000-000000000000"
+                          }""")))
   public PatientResponse findById(@PathParam("id") UUID id) {
     return PatientResponse.from(service.findById(id));
   }

@@ -105,3 +105,12 @@ export PATH="$JAVA_HOME/bin:$PATH"
 - **The CPF in every API response is masked** to its last two digits
   (`common/DocumentMasking.maskCpf`) — this module is reachable from a public sandbox.
   Do not add an endpoint that returns the unmasked value.
+- **Every error is `{field, message, category, traceId, timestamp, path}`**,
+  built once in `GlobalExceptionMapper.error()` — a new branch in that switch
+  should call it, not construct `ApiError` by hand, or it will be missing the
+  four fields that make an error actually answerable from logs alone. `field`
+  is `null` when there is no single offending field (a 404, a 500).
+- **A single, unnamed `@ExampleObject` is silently dropped from the generated
+  OpenAPI document.** SmallRye needs a `name`, even when there is only one
+  example for that response — verify against `/q/openapi` directly (or
+  `curl .../q/openapi | jq`), not just that the Java annotations compile.

@@ -81,7 +81,7 @@ public class DoctorResource {
       description = "The request body itself is malformed — see ProcedureResource's note.")
   @APIResponse(
       responseCode = "422",
-      description = "brdoc rejected the CPF or the email.",
+      description = "brdoc rejected the CPF or the email. Shown here are the two fields that vary by situation; every error additionally carries category, traceId, timestamp and path — see PatientResource's 404 example for the complete shape.",
       content =
           @Content(
               examples =
@@ -91,7 +91,7 @@ public class DoctorResource {
                           {"field": "cpf", "message": "Invalid CPF format"}""")))
   @APIResponse(
       responseCode = "409",
-      description = "A doctor with this CPF or this licence number is already registered.",
+      description = "A doctor with this CPF or this licence number is already registered. Shown here are the two fields that vary by situation; every error additionally carries category, traceId, timestamp and path — see PatientResource's 404 example for the complete shape.",
       content =
           @Content(
               examples =

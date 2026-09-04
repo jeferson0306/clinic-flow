@@ -83,7 +83,7 @@ public class AppointmentResource {
   @APIResponse(responseCode = "404", description = "The patient, doctor or procedure does not exist")
   @APIResponse(
       responseCode = "409",
-      description = "The doctor already has a SCHEDULED appointment overlapping this time range.",
+      description = "The doctor already has a SCHEDULED appointment overlapping this time range. Shown here are the two fields that vary by situation; every error additionally carries category, traceId, timestamp and path — see PatientResource's 404 example for the complete shape.",
       content =
           @Content(
               examples =

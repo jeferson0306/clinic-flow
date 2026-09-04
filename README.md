@@ -184,6 +184,41 @@ every log line it wrote together — a caller reporting a problem can hand back
 that one value. No collector is deployed yet (`quarkus.otel.traces.exporter=none`),
 so nothing is exported anywhere; the ids exist and reach the logs regardless.
 
+### Error handling
+
+Every error this API returns — however it happened — comes back through
+`GlobalExceptionMapper`, in one shape:
+
+```json
+{
+  "field": "cpf",
+  "message": "Invalid CPF format",
+  "category": "VALIDATION",
+  "traceId": "9be69c71af1b5854bdb8139bae338f26",
+  "timestamp": "2026-09-04T18:51:37.303203Z",
+  "path": "/v1/patients"
+}
+```
+
+`category` is what makes the logs answerable at a glance — the question
+"is this a bug, or someone sent bad data" without reading a stack trace:
+
+| Category | Means | Example |
+|---|---|---|
+| `VALIDATION` | Well-formed request, a value fails a rule brdoc or this API owns | An invalid CPF |
+| `CONFLICT` | Valid on its own, conflicts with state that already exists | A duplicate CPF, a double-booked doctor |
+| `NOT_FOUND` | A referenced id does not exist | An unknown patient id |
+| `SYSTEM` | Unexpected — everything else | brdoc timed out |
+
+Every rejection is also logged at the point `GlobalExceptionMapper` decides
+it — status, exception type, the caller's IP (from `X-Forwarded-For`, best-
+effort until a trusted-proxy config like brdoc's `TRUSTED_PLATFORM` is added
+here too) and the path — tagged with the same trace id as the response, via
+`quarkus.log.console.format`. A `SYSTEM` error additionally logs the full
+exception. Never logged, in any category: the value that was rejected — a
+CPF is still personal data even when invalid, and this service is reachable
+from a public sandbox.
+
 ## Roadmap
 
 Each phase is a real, working increase in scope — not scaffolding for its own
