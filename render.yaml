@@ -1,8 +1,15 @@
 # Render Blueprint — https://render.com/docs/blueprint-spec
 #
 # One-click setup: Render dashboard > New > Blueprint > point at this repo.
-# Only DATABASE_URL needs to be typed in by hand (sync: false) — Neon's own
-# connection string, with "postgresql://" swapped for "jdbc:postgresql://".
+# Two things need typing in by hand (sync: false / secret files are never
+# read from this file):
+#   - DATABASE_URL: Neon's own connection string, "postgresql://" swapped
+#     for "jdbc:postgresql://".
+#   - The JWT signing key, as a Secret File — see secretFiles below. If the
+#     Blueprint does not pick this section up automatically, add it by hand
+#     under the service's own Settings -> Secret Files instead; either way,
+#     the path has to match %prod.smallrye.jwt.sign.key.location in
+#     application.properties.
 services:
   - type: web
     name: clinic-flow
@@ -18,3 +25,6 @@ services:
         sync: false
       - key: BRDOC_API_URL
         value: https://api-data-validator.onrender.com
+    secretFiles:
+      - name: /etc/secrets/jwt-private-key.pem
+        sync: false

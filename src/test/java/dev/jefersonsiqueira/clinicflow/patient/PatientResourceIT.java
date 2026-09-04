@@ -14,6 +14,7 @@ import dev.jefersonsiqueira.clinicflow.validation.viacep.ViaCepClient;
 import dev.jefersonsiqueira.clinicflow.validation.viacep.ViaCepResponse;
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
+import io.quarkus.test.security.TestSecurity;
 import io.restassured.http.ContentType;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
@@ -28,6 +29,11 @@ import org.junit.jupiter.api.Test;
  * from it is handled correctly.
  */
 @QuarkusTest
+// Every write endpoint under test here now requires a role — see the
+// RolesAllowed added alongside this. A blanket ADMIN+DOCTOR grant, not a
+// real login, because these tests exist to verify business logic, not the
+// RBAC boundary itself; AuthResourceIT and AuthorizationIT own that.
+@TestSecurity(user = "test-user", roles = {"ADMIN", "DOCTOR"})
 class PatientResourceIT {
 
   @InjectMock @RestClient BrdocClient brdoc;

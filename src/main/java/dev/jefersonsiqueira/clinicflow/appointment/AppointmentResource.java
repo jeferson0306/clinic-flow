@@ -1,6 +1,8 @@
 package dev.jefersonsiqueira.clinicflow.appointment;
 
 import io.smallrye.common.annotation.RunOnVirtualThread;
+import jakarta.annotation.security.RolesAllowed;
+import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
@@ -38,6 +40,7 @@ public class AppointmentResource {
   // Content-Type, and JAX-RS rejects that as 415 against a class-wide
   // @Consumes it can never satisfy.
   @Consumes(MediaType.APPLICATION_JSON)
+  @RolesAllowed({"ADMIN", "DOCTOR"})
   @Operation(
       summary = "Schedule an appointment",
       description =
@@ -101,6 +104,7 @@ public class AppointmentResource {
 
   @POST
   @Path("/{id}/cancel")
+  @RolesAllowed({"ADMIN", "DOCTOR"})
   @Operation(
       summary = "Cancel an appointment, freeing the doctor's slot",
       description =

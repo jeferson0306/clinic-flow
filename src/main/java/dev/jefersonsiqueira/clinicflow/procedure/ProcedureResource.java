@@ -1,6 +1,7 @@
 package dev.jefersonsiqueira.clinicflow.procedure;
 
 import io.smallrye.common.annotation.RunOnVirtualThread;
+import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
@@ -45,6 +46,7 @@ public class ProcedureResource {
   @Inject ProcedureService service;
 
   @POST
+  @RolesAllowed("ADMIN")
   @Operation(
       summary = "Add a procedure to the catalogue",
       description = "No brdoc involvement — a procedure carries no document.")

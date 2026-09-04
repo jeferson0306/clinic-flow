@@ -1,6 +1,7 @@
 package dev.jefersonsiqueira.clinicflow.doctor;
 
 import io.smallrye.common.annotation.RunOnVirtualThread;
+import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
@@ -34,6 +35,7 @@ public class DoctorResource {
   @Inject DoctorService service;
 
   @POST
+  @RolesAllowed("ADMIN")
   @Operation(
       summary = "Register a doctor",
       description =

@@ -2,20 +2,24 @@
 
 A clinic management system — patients, doctors, procedures, exams,
 appointments, billing and calendar, one place — built to run a **public
-sandbox**: anyone can register and try the real flow, not a screenshot of it.
+demo**: two seeded accounts, `admin`/`admin123` and `doctor`/`doctor123`, log
+in and try the real flow, not a screenshot of it. Reading is open to anyone;
+writing needs one of those two logins — see [Authentication](#authentication)
+for why that is a deliberate change from this project's earlier "anyone can
+write anonymously" shape, not an accident.
 
 Java 25, Quarkus 3.39. Backend for a portfolio project; the frontend (GSAP,
 animejs, PT/EN/ES) is a separate app consuming this API.
 
 ## Status
 
-**Phase 3 — calendar, tracing, virtual threads.** Everything through
-appointments (patients, doctors, procedures, exams, double-booking rejected
-by Postgres itself) plus the query side scheduling did not need but a
-calendar view does: `GET /v1/doctors/{id}/availability` lists a doctor's free
-slots for a day and a procedure. Every request carries an OpenTelemetry
-trace id through its logs and back as `X-Trace-Id`; every endpoint runs on a
-virtual thread rather than one of Quarkus's few event-loop threads.
+**Rate limiting and real authentication.** Everything through the calendar
+(patients, doctors, procedures, exams, appointments, double-booking rejected
+by Postgres itself, availability) plus two things every public API needs
+before it should actually be public: every client address is throttled by a
+token bucket, and every write now requires a JWT obtained by logging in as
+one of two seeded demo accounts — see
+[Rate limiting](#rate-limiting) and [Authentication](#authentication).
 
 ## Architecture
 
@@ -169,6 +173,7 @@ common/               the one exception mapper every module's errors go through,
                       the CPF-masking helper, and the trace-id response filter
 ratelimit/            token-bucket rate limiting and the client-address resolver
                       GlobalExceptionMapper's logging also goes through
+auth/                 login, JWT issuance, the two seeded demo accounts
 ```
 
 ## Concurrency and observability
@@ -242,6 +247,44 @@ which collapses everyone behind one proxy into a single bucket but is never
 spoofable. This is the same principled approach as brdoc's own
 `TRUSTED_PLATFORM`, deliberately — including the env var's name.
 
+### Authentication
+
+Two roles, matching the two kinds of work this clinic actually has —
+`ADMIN` (registers patients and doctors, maintains the procedure catalogue)
+and `DOCTOR` (schedules and cancels appointments, requests and records
+exams) — not a general-purpose permission system built ahead of a role a
+third kind of user would need. Every `GET` stays open to anyone; every
+`POST` needs a valid JWT with the right role.
+
+```bash
+curl -X POST https://clinic-flow.onrender.com/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "admin", "password": "admin123"}'
+# {"token": "eyJ...", "expiresInSeconds": 28800, "role": "ADMIN"}
+
+curl -X POST https://clinic-flow.onrender.com/v1/procedures \
+  -H "Authorization: Bearer eyJ..." -H "Content-Type: application/json" \
+  -d '{"name": "Consultation", "durationMinutes": 30, "priceCents": 15000}'
+```
+
+Two seeded accounts (`admin`/`admin123`, `doctor`/`doctor123`, V6's
+migration) exist so a public demo login is possible from the first deploy —
+real bcrypt hashes, real JWTs, the passwords simply published, the same as
+any other public demo login. This is a deliberate change of shape from the
+project's earlier pitch ("anyone can write anonymously"): a public sandbox
+still needs *some* line between a visitor trying the product and a script
+hammering it, and "log in with a published demo account" is that line
+without needing a real identity from anyone.
+
+Standard asymmetric JWT — SmallRye JWT, RS256. The public key is committed
+(`jwt/publicKey.pem`); it is meant to be shared, the same as any signature
+verification key. The private key is not, anywhere it matters: `%dev`/`%test`
+use a throwaway keypair bundled purely for convenience (clearly not the
+same keypair as production's), while `%prod` reads it from a Render
+[Secret File](https://render.com/docs/configure-environment-variables#secret-files)
+— a mounted path, not an env var, because a multi-line PEM does not belong
+in a single-line value.
+
 ## Roadmap
 
 Each phase is a real, working increase in scope — not scaffolding for its own
@@ -254,10 +297,13 @@ sake. In the order they will be built:
 4. **Billing** — Stripe and Mercado Pago/Pix, in sandbox mode only. Payment
    intents tied to an appointment, webhook handling, idempotent by design —
    a retried webhook must not charge twice.
-5. **Public sandbox mode** — pre-seeded demo accounts so a first-time visitor
-   has something to look at immediately, rate limiting on public
-   self-registration (reusing the lesson from brdoc's own rate limiter), and
-   a way to tell demo data apart from anything that matters.
+5. **Public sandbox mode** — rate limiting ~~done~~ (a token bucket per
+   client address, reusing the lesson from brdoc's own rate limiter — see
+   [Rate limiting](#rate-limiting)), demo accounts ~~done~~ but shaped as a
+   login rather than open self-registration — see
+   [Authentication](#authentication) for why. Still open: a way to tell demo
+   data apart from anything that matters, once there is a "matters" to tell
+   it apart from.
 6. **Observability** — structured JSON logs in production
    (`quarkus-logging-json`), request tracing, metrics beyond the Prometheus
    endpoint already wired up, health checks that actually check the
@@ -317,6 +363,12 @@ Two kinds, kept apart by Maven's own naming convention rather than by hand:
   suite. What these own is the wiring: a rejection from brdoc is handled
   correctly, a patient is stored with the *normalized* document values, a
   ViaCEP outage never blocks registration, a doctor is never double-booked.
+  Every write endpoint now requires a role too — most `*IT` classes carry a
+  blanket `@TestSecurity(roles = {"ADMIN", "DOCTOR"})` so they can keep
+  testing business logic rather than the RBAC boundary; that boundary
+  (no token, the wrong role, the right one) is `AuthorizationIT`'s job
+  alone, and the real credential path — bcrypt, a real JWT, the seeded demo
+  accounts — is `AuthResourceIT`'s.
 
 ```bash
 ./mvnw test      # unit only — seconds, no Docker
@@ -341,6 +393,12 @@ by a missing `unzip`).
   it; nothing here reconstructs or appends to it.
 - **brdoc:** `BRDOC_API_URL`, defaulted in `render.yaml` to the already-
   deployed instance — nothing to configure for a fresh deploy.
+- **JWT signing key:** a Secret File at `/etc/secrets/jwt-private-key.pem` —
+  see [Authentication](#authentication) for why a Secret File and not an env
+  var. Generate a keypair, commit only the public half to
+  `jwt/publicKey.pem`, upload the private half through Render's dashboard
+  (Settings → Secret Files) or `render.yaml`'s own `secretFiles` — never to
+  this repository.
 - **Payments:** Stripe and Mercado Pago in sandbox/test mode only, added when
   the billing phase starts — no key for either exists yet.
 

@@ -1,6 +1,7 @@
 package dev.jefersonsiqueira.clinicflow.common;
 
 import dev.jefersonsiqueira.clinicflow.appointment.DoubleBookingException;
+import dev.jefersonsiqueira.clinicflow.auth.InvalidCredentialsException;
 import dev.jefersonsiqueira.clinicflow.doctor.DuplicateDoctorException;
 import dev.jefersonsiqueira.clinicflow.patient.DuplicatePatientException;
 import dev.jefersonsiqueira.clinicflow.ratelimit.ClientAddressResolver;
@@ -53,6 +54,7 @@ public class GlobalExceptionMapper implements ExceptionMapper<Exception> {
           case DuplicatePatientException e -> error(409, ErrorCategory.CONFLICT, "cpf", e.getMessage());
           case DuplicateDoctorException e -> error(409, ErrorCategory.CONFLICT, e.field(), e.getMessage());
           case DoubleBookingException e -> error(409, ErrorCategory.CONFLICT, "startsAt", e.getMessage());
+          case InvalidCredentialsException e -> error(401, ErrorCategory.UNAUTHORIZED, null, e.getMessage());
           case RateLimitedException e ->
               Response.fromResponse(error(429, ErrorCategory.RATE_LIMITED, null, e.getMessage()))
                   .header("Retry-After", "1")

@@ -15,6 +15,8 @@ public enum ErrorCategory {
   NOT_FOUND,
   /** This client address has been throttled — see RateLimitFilter. */
   RATE_LIMITED,
+  /** A login attempt failed, or a request carried no valid credentials at all. */
+  UNAUTHORIZED,
   /** Unexpected. Everything that is not one of the four above. */
   SYSTEM
 }

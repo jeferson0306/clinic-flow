@@ -1,6 +1,7 @@
 package dev.jefersonsiqueira.clinicflow.exam;
 
 import io.smallrye.common.annotation.RunOnVirtualThread;
+import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
@@ -34,6 +35,7 @@ public class ExamResource {
   @Inject ExamService service;
 
   @POST
+  @RolesAllowed("DOCTOR")
   @Operation(
       summary = "Request an exam for a patient",
       description =
@@ -82,6 +84,7 @@ public class ExamResource {
 
   @POST
   @Path("/{id}/result")
+  @RolesAllowed("DOCTOR")
   @Operation(summary = "Record an exam's result")
   @RequestBody(
       content =

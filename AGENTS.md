@@ -8,11 +8,16 @@ Document validation (CPF, email, phone, postcode format) is delegated to the
 deployed [brdoc](https://github.com/jeferson0306/brdoc) service over HTTP
 rather than reimplemented — see `docs/adr/0002-brdoc-over-http-not-reimplemented.md`.
 `README.md` has the full roadmap; `patient`, `doctor`, `procedure`, `exam`,
-`appointment`, `calendar` and `ratelimit` exist so far. Every resource runs
-on a virtual thread (`@RunOnVirtualThread`); every request carries an
-OpenTelemetry trace id into its logs and back as `X-Trace-Id`, and is
-throttled per client address by a token bucket (`ratelimit/`) before it
-reaches routing.
+`appointment`, `calendar`, `ratelimit` and `auth` exist so far. Every
+resource runs on a virtual thread (`@RunOnVirtualThread`); every request
+carries an OpenTelemetry trace id into its logs and back as `X-Trace-Id`,
+and is throttled per client address by a token bucket (`ratelimit/`) before
+it reaches routing. Every `POST` requires a JWT with the right role
+(`@RolesAllowed`) — two seeded accounts, `admin`/`admin123` and
+`doctor`/`doctor123`, exist for `POST /v1/auth/login` from the first deploy.
+Never commit a real (non-`%dev`/`%test`) JWT private key — see
+`README.md`'s Authentication section for how production's is handled
+instead.
 
 ## Running
 
@@ -124,3 +129,16 @@ export PATH="$JAVA_HOME/bin:$PATH"
   OpenAPI document.** SmallRye needs a `name`, even when there is only one
   example for that response — verify against `/q/openapi` directly (or
   `curl .../q/openapi | jq`), not just that the Java annotations compile.
+- **A class-level `@TestSecurity` cannot be "removed" for one test method.**
+  It intercepts every request in that class and injects a fake principal
+  regardless of what was actually sent — a test inside that class can never
+  see what happens with no credentials at all. `AuthorizationIT` is
+  deliberately the one `*IT` class with no class-level `@TestSecurity`, for
+  exactly that reason; every other class's blanket
+  `@TestSecurity(roles = {"ADMIN", "DOCTOR"})` is only safe *because*
+  nothing in it is testing the RBAC boundary itself.
+- **Bcrypt needs the classpath it needs.** `BcryptUtil.bcryptHash`/`matches`
+  throw `NoClassDefFoundError: org/wildfly/common/Assert` if invoked outside
+  a full Quarkus (or at least full Maven dependency) classpath — a bare
+  `jshell --class-path <one jar>` is not enough; use
+  `mvn dependency:build-classpath` to get the real one first.
