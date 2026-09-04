@@ -9,10 +9,14 @@ animejs, PT/EN/ES) is a separate app consuming this API.
 
 ## Status
 
-**Phase 1 — patients and doctors.** Both register end to end: validated
-against [brdoc](https://github.com/jeferson0306/brdoc) over HTTP, stored in
-Postgres via Flyway-managed schema, CPF masked in every response. Patient
-registration also auto-fills the address from ViaCEP.
+**Phase 2 — clinical operations.** Patients and doctors register end to end,
+validated against [brdoc](https://github.com/jeferson0306/brdoc) over HTTP.
+A procedure catalogue exists. Exams can be requested against a patient and
+have their result recorded later. Appointments tie a patient, a doctor, a
+procedure and a time slot together, and a doctor double-booking is rejected
+by Postgres itself — an `EXCLUDE USING gist` constraint, not an application-
+level check, which is the only thing that is actually race-safe under
+concurrent booking.
 
 ## Architecture
 
@@ -32,6 +36,10 @@ down — see `AddressLookupService`.
 ```
 patient/            entity, repository, service, REST resource, DTOs
 doctor/              same shape as patient/, plus a licence number
+procedure/           the bookable catalogue — no brdoc involvement, no documents
+exam/                requested against a patient by a doctor, result recorded later
+appointment/         patient + doctor + procedure + time slot; the double-booking
+                     guarantee lives in the database, not here — see V5's migration
 address/            the embeddable Address value object + the ViaCEP lookup
 validation/brdoc/   the brdoc REST client and the DocumentValidator every
                      module validates through
@@ -45,11 +53,12 @@ Each phase is a real, working increase in scope — not scaffolding for its own
 sake. In the order they will be built:
 
 1. ~~**Patients & doctors**~~ — done.
-2. **Clinical operations** — procedure catalogue, exam records, appointments
-   tying patient + doctor + procedure + time slot together, with a doctor
-   double-booking rejected at the database, not just in application code.
+2. ~~**Clinical operations**~~ — done: procedures, exams, appointments, the
+   double-booking guarantee.
 3. **Calendar** — availability per doctor, working hours, the booking API the
-   frontend's calendar view calls.
+   frontend's calendar view calls. Appointments already exist; this is the
+   query side — "what is free" — that scheduling one does not need but a
+   calendar view does.
 4. **Billing** — Stripe and Mercado Pago/Pix, in sandbox mode only. Payment
    intents tied to an appointment, webhook handling, idempotent by design —
    a retried webhook must not charge twice.

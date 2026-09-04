@@ -1,5 +1,6 @@
 package dev.jefersonsiqueira.clinicflow.common;
 
+import dev.jefersonsiqueira.clinicflow.appointment.DoubleBookingException;
 import dev.jefersonsiqueira.clinicflow.doctor.DuplicateDoctorException;
 import dev.jefersonsiqueira.clinicflow.patient.DuplicatePatientException;
 import dev.jefersonsiqueira.clinicflow.validation.brdoc.DocumentValidationException;
@@ -35,6 +36,8 @@ public class GlobalExceptionMapper implements ExceptionMapper<Exception> {
           Response.status(409).entity(new ApiError("cpf", e.getMessage())).build();
       case DuplicateDoctorException e ->
           Response.status(409).entity(new ApiError(e.field(), e.getMessage())).build();
+      case DoubleBookingException e ->
+          Response.status(409).entity(new ApiError("startsAt", e.getMessage())).build();
       case ConstraintViolationException e -> {
         var first = e.getConstraintViolations().iterator().next();
         yield Response.status(422)
