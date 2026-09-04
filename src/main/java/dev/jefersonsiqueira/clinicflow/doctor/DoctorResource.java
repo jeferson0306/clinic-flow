@@ -5,8 +5,10 @@ import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
@@ -162,5 +164,30 @@ public class DoctorResource {
   @APIResponse(responseCode = "404", description = "No doctor with this id")
   public DoctorResponse findById(@PathParam("id") UUID id) {
     return DoctorResponse.from(service.findById(id));
+  }
+
+  @PUT
+  @Path("/{id}")
+  @RolesAllowed("ADMIN")
+  @Operation(summary = "Update a doctor", description = "No cpf field — same reasoning as PatientResource's update.")
+  @APIResponse(responseCode = "200", description = "Doctor updated")
+  @APIResponse(responseCode = "404", description = "No doctor with this id")
+  @APIResponse(responseCode = "409", description = "Another doctor already has this licence number")
+  public DoctorResponse update(@PathParam("id") UUID id, @Valid UpdateDoctorRequest request) {
+    return DoctorResponse.from(service.update(id, request));
+  }
+
+  @DELETE
+  @Path("/{id}")
+  @RolesAllowed("ADMIN")
+  @Operation(
+      summary = "Delete a doctor",
+      description = "Rejected with 409 if the doctor has any appointment or exam on record.")
+  @APIResponse(responseCode = "204", description = "Doctor deleted")
+  @APIResponse(responseCode = "404", description = "No doctor with this id")
+  @APIResponse(responseCode = "409", description = "The doctor has appointments or exams referencing it.")
+  public Response delete(@PathParam("id") UUID id) {
+    service.delete(id);
+    return Response.noContent().build();
   }
 }

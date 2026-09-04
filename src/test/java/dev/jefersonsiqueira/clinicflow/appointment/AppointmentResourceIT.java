@@ -176,4 +176,16 @@ class AppointmentResourceIT {
         .then()
         .statusCode(201);
   }
+
+  @Test
+  void deletingAPatientDoctorOrProcedureWithAnAppointmentIsRejected() {
+    Instant tenAM = Instant.now().plus(4, ChronoUnit.DAYS).truncatedTo(ChronoUnit.HOURS);
+    given().contentType(ContentType.JSON).body(schedule(tenAM.toString())).post("/v1/appointments").then().statusCode(201);
+
+    // Cancelling does not remove the row — a cancelled appointment is still a
+    // record referencing all three, and DELETE has to respect that too.
+    given().when().delete("/v1/patients/" + patientId).then().statusCode(409);
+    given().when().delete("/v1/doctors/" + doctorId).then().statusCode(409);
+    given().when().delete("/v1/procedures/" + procedureId).then().statusCode(409);
+  }
 }

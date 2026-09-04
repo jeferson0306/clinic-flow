@@ -105,6 +105,57 @@ class PatientResourceIT {
   }
 
   @Test
+  void updatesAPatientWithoutTouchingTheCpf() {
+    String id =
+        given()
+            .contentType(ContentType.JSON)
+            .body(
+                """
+                {"fullName":"Carla Dias","cpf":"701.919.410-05","email":"carla@example.com","postcode":"01310-200"}
+                """)
+            .when()
+            .post("/v1/patients")
+            .then()
+            .statusCode(201)
+            .extract()
+            .path("id");
+
+    given()
+        .contentType(ContentType.JSON)
+        .body(
+            """
+            {"fullName":"Carla Dias Souza","email":"carla.souza@example.com","postcode":"01310-200"}
+            """)
+        .when()
+        .put("/v1/patients/" + id)
+        .then()
+        .statusCode(200)
+        .body("fullName", is("Carla Dias Souza"))
+        .body("email", is("carla.souza@example.com"))
+        .body("maskedCpf", is("*********05"));
+  }
+
+  @Test
+  void deletesAPatientWithNoRecordsAgainstThem() {
+    String id =
+        given()
+            .contentType(ContentType.JSON)
+            .body(
+                """
+                {"fullName":"Deletable Patient","cpf":"216.508.510-08","email":"del@example.com","postcode":"01310-200"}
+                """)
+            .when()
+            .post("/v1/patients")
+            .then()
+            .statusCode(201)
+            .extract()
+            .path("id");
+
+    given().when().delete("/v1/patients/" + id).then().statusCode(204);
+    given().when().get("/v1/patients/" + id).then().statusCode(404);
+  }
+
+  @Test
   void savesAPatientEvenWhenViaCepIsDown() {
     when(viaCep.lookup(anyString())).thenThrow(new RuntimeException("connection refused"));
 

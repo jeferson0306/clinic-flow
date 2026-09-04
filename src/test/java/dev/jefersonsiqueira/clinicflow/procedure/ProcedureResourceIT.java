@@ -49,4 +49,46 @@ class ProcedureResourceIT {
         .then()
         .statusCode(400);
   }
+
+  @Test
+  void updatesAProcedure() {
+    String id =
+        given()
+            .contentType(ContentType.JSON)
+            .body("""
+                {"name":"Blood panel","durationMinutes":15,"priceCents":8000}
+                """)
+            .post("/v1/procedures")
+            .jsonPath()
+            .getString("id");
+
+    given()
+        .contentType(ContentType.JSON)
+        .body("""
+            {"name":"Complete blood panel","durationMinutes":20,"priceCents":9500}
+            """)
+        .when()
+        .put("/v1/procedures/" + id)
+        .then()
+        .statusCode(200)
+        .body("name", is("Complete blood panel"))
+        .body("durationMinutes", is(20))
+        .body("priceCents", is(9500));
+  }
+
+  @Test
+  void deletesAProcedureWithNoAppointmentsAgainstIt() {
+    String id =
+        given()
+            .contentType(ContentType.JSON)
+            .body("""
+                {"name":"Deletable","durationMinutes":10,"priceCents":5000}
+                """)
+            .post("/v1/procedures")
+            .jsonPath()
+            .getString("id");
+
+    given().when().delete("/v1/procedures/" + id).then().statusCode(204);
+    given().when().get("/v1/procedures/" + id).then().statusCode(404);
+  }
 }

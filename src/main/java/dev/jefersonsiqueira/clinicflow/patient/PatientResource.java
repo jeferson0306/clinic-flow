@@ -5,8 +5,10 @@ import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
@@ -221,5 +223,38 @@ public class PatientResource {
                           }""")))
   public PatientResponse findById(@PathParam("id") UUID id) {
     return PatientResponse.from(service.findById(id));
+  }
+
+  @PUT
+  @Path("/{id}")
+  @RolesAllowed("ADMIN")
+  @Operation(
+      summary = "Update a patient",
+      description =
+          "No cpf field — see UpdatePatientRequest's javadoc for why. Email and, if given, "
+              + "phone are re-validated through brdoc; the postcode is re-resolved through ViaCEP.")
+  @APIResponse(responseCode = "200", description = "Patient updated")
+  @APIResponse(responseCode = "404", description = "No patient with this id")
+  @APIResponse(
+      responseCode = "422",
+      description = "brdoc rejected the email or phone. Same shape as register's own 422.")
+  public PatientResponse update(@PathParam("id") UUID id, @Valid UpdatePatientRequest request) {
+    return PatientResponse.from(service.update(id, request));
+  }
+
+  @DELETE
+  @Path("/{id}")
+  @RolesAllowed("ADMIN")
+  @Operation(
+      summary = "Delete a patient",
+      description = "Rejected with 409 if the patient has any appointment or exam on record.")
+  @APIResponse(responseCode = "204", description = "Patient deleted")
+  @APIResponse(responseCode = "404", description = "No patient with this id")
+  @APIResponse(
+      responseCode = "409",
+      description = "The patient has appointments or exams referencing it.")
+  public Response delete(@PathParam("id") UUID id) {
+    service.delete(id);
+    return Response.noContent().build();
   }
 }

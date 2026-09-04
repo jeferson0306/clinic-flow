@@ -5,8 +5,10 @@ import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
@@ -142,5 +144,29 @@ public class ProcedureResource {
   @APIResponse(responseCode = "404", description = "No procedure with this id")
   public ProcedureResponse findById(@PathParam("id") UUID id) {
     return ProcedureResponse.from(service.findById(id));
+  }
+
+  @PUT
+  @Path("/{id}")
+  @RolesAllowed("ADMIN")
+  @Operation(summary = "Update a procedure")
+  @APIResponse(responseCode = "200", description = "Procedure updated")
+  @APIResponse(responseCode = "404", description = "No procedure with this id")
+  public ProcedureResponse update(@PathParam("id") UUID id, @Valid CreateProcedureRequest request) {
+    return ProcedureResponse.from(service.update(id, request));
+  }
+
+  @DELETE
+  @Path("/{id}")
+  @RolesAllowed("ADMIN")
+  @Operation(
+      summary = "Delete a procedure",
+      description = "Rejected with 409 if the procedure has any appointment on record.")
+  @APIResponse(responseCode = "204", description = "Procedure deleted")
+  @APIResponse(responseCode = "404", description = "No procedure with this id")
+  @APIResponse(responseCode = "409", description = "The procedure has appointments referencing it.")
+  public Response delete(@PathParam("id") UUID id) {
+    service.delete(id);
+    return Response.noContent().build();
   }
 }

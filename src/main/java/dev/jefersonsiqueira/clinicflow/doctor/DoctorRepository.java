@@ -14,4 +14,9 @@ public class DoctorRepository implements PanacheRepositoryBase<Doctor, UUID> {
   public boolean existsByLicenseNumber(String licenseNumber) {
     return find("licenseNumber", licenseNumber).firstResultOptional().isPresent();
   }
+
+  /** Same check as {@link #existsByLicenseNumber}, excluding the doctor being updated. */
+  public boolean existsByLicenseNumberForAnotherDoctor(String licenseNumber, UUID excludingId) {
+    return find("licenseNumber = ?1 and id != ?2", licenseNumber, excludingId).firstResultOptional().isPresent();
+  }
 }
