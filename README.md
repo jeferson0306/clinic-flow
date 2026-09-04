@@ -32,6 +32,122 @@ Postcode *content* (street, city, state) comes from ViaCEP, Brazil's public
 postcode lookup, and is never allowed to block registration if it is slow or
 down — see `AddressLookupService`.
 
+Rendered as a diagram rather than described in prose, because the shape —
+one REST layer, one service layer per module, one place every module reaches
+the outside world through — is the point ADR-0001 and ADR-0002 argue for.
+[Mermaid](https://mermaid.js.org/) renders this natively wherever this file
+is viewed on GitHub — no draw.io account, no exported image to keep in sync
+by hand, no dead link when the diagram changes; the diagram *is* the text
+below it.
+
+```mermaid
+flowchart TB
+    subgraph client["Caller"]
+        SWAGGER["Swagger UI<br/>/q/swagger-ui"]
+        FUTURE_FE["Frontend<br/>(Phase 7, not built yet)"]
+    end
+
+    subgraph app["clinic-flow — one Quarkus deployable"]
+        direction TB
+
+        subgraph presentation["Presentation — REST resources"]
+            direction LR
+            PATIENT_RES["PatientResource"]
+            DOCTOR_RES["DoctorResource"]
+            PROC_RES["ProcedureResource"]
+            EXAM_RES["ExamResource"]
+            APPT_RES["AppointmentResource"]
+            CAL_RES["CalendarResource"]
+        end
+
+        subgraph application["Application — services, one per module"]
+            direction LR
+            PATIENT_SVC["PatientService"]
+            DOCTOR_SVC["DoctorService"]
+            PROC_SVC["ProcedureService"]
+            EXAM_SVC["ExamService"]
+            APPT_SVC["AppointmentService"]
+            CAL_SVC["AvailabilityService<br/>+ AvailabilityCalculator (pure)"]
+        end
+
+        subgraph domain["Domain — Panache entities and repositories"]
+            direction LR
+            PATIENT_REPO[("PatientRepository")]
+            DOCTOR_REPO[("DoctorRepository")]
+            PROC_REPO[("ProcedureRepository")]
+            EXAM_REPO[("ExamRepository")]
+            APPT_REPO[("AppointmentRepository")]
+        end
+
+        subgraph crosscutting["Cross-cutting — every module goes through these"]
+            direction LR
+            VALIDATOR["DocumentValidator"]
+            ADDRESS["AddressLookupService"]
+            MAPPER["GlobalExceptionMapper"]
+            TRACE["TraceIdResponseFilter"]
+        end
+    end
+
+    subgraph external["External systems"]
+        direction LR
+        BRDOC["brdoc<br/>Go · Render free tier<br/>CPF / email / phone / CEP format"]
+        VIACEP["ViaCEP<br/>public · no key<br/>postcode → address"]
+        PG[("Postgres<br/>Neon, prod · Testcontainers, dev+test")]
+    end
+
+    SWAGGER --> presentation
+    FUTURE_FE -.->|Phase 7| presentation
+
+    PATIENT_RES --> PATIENT_SVC
+    DOCTOR_RES --> DOCTOR_SVC
+    PROC_RES --> PROC_SVC
+    EXAM_RES --> EXAM_SVC
+    APPT_RES --> APPT_SVC
+    CAL_RES --> CAL_SVC
+
+    PATIENT_SVC --> PATIENT_REPO
+    DOCTOR_SVC --> DOCTOR_REPO
+    PROC_SVC --> PROC_REPO
+    EXAM_SVC --> EXAM_REPO
+    EXAM_SVC -.-> PATIENT_SVC
+    EXAM_SVC -.-> DOCTOR_SVC
+    APPT_SVC --> APPT_REPO
+    APPT_SVC -.-> PATIENT_SVC
+    APPT_SVC -.-> DOCTOR_SVC
+    APPT_SVC -.-> PROC_SVC
+    CAL_SVC -.-> APPT_REPO
+    CAL_SVC -.-> DOCTOR_SVC
+    CAL_SVC -.-> PROC_SVC
+
+    PATIENT_SVC --> VALIDATOR
+    PATIENT_SVC --> ADDRESS
+    DOCTOR_SVC --> VALIDATOR
+
+    VALIDATOR -->|HTTPS| BRDOC
+    ADDRESS -->|HTTPS| VIACEP
+    ADDRESS --> VALIDATOR
+
+    PATIENT_REPO --> PG
+    DOCTOR_REPO --> PG
+    PROC_REPO --> PG
+    EXAM_REPO --> PG
+    APPT_REPO -.->|EXCLUDE USING gist<br/>double-booking, in Postgres itself| PG
+
+    presentation -.->|every uncaught exception| MAPPER
+    presentation -.->|every response| TRACE
+
+    classDef ext fill:#f3f4f6,stroke:#9ca3af,color:#111827
+    classDef cross fill:#fef3c7,stroke:#d97706,color:#111827
+    class BRDOC,VIACEP,PG ext
+    class VALIDATOR,ADDRESS,MAPPER,TRACE cross
+```
+
+Solid arrows are calls made on every request through that path; dashed
+arrows are either a module reusing another module's *service* (never its
+entity or repository directly — that boundary is what keeps this a modulith
+and not a shared-table free-for-all) or a guarantee that lives in Postgres
+itself rather than in a call at all.
+
 ```
 patient/             entity, repository, service, REST resource, DTOs
 doctor/               same shape as patient/, plus a licence number
@@ -128,11 +244,25 @@ Two kinds, kept apart by Maven's own naming convention rather than by hand:
 
 ## Deployment
 
-Not deployed yet. The plan, once this phase is reviewed:
+**Backend:** Render, same free tier as `brdoc`, from [`render.yaml`](render.yaml)
+— a [Blueprint](https://render.com/docs/blueprint-spec): point Render's
+dashboard at this repo (New → Blueprint) and it creates the service from that
+file. `Dockerfile` is a real multi-stage build — Maven runs *inside* it, so
+Render's own `docker build` against a clean checkout is enough; see the notes
+in `Dockerfile` and `AGENTS.md` for two build-environment bugs that cost real
+time to track down (a `.dockerignore` excluding the source it needed to
+build from, and a misleading Maven Wrapper checksum failure actually caused
+by a missing `unzip`).
 
-- **Database:** Neon Postgres. `DATABASE_URL`, `DATABASE_USER`,
-  `DATABASE_PASSWORD` as Render environment variables — see
-  `%prod` in `application.properties`.
-- **Backend:** Render, same free tier as `brdoc`.
+- **Database:** Neon Postgres. One environment variable, `DATABASE_URL` —
+  Neon's own connection string, `postgresql://` swapped for
+  `jdbc:postgresql://`. Credentials and `sslmode=require` already live inside
+  it; nothing here reconstructs or appends to it.
+- **brdoc:** `BRDOC_API_URL`, defaulted in `render.yaml` to the already-
+  deployed instance — nothing to configure for a fresh deploy.
 - **Payments:** Stripe and Mercado Pago in sandbox/test mode only, added when
   the billing phase starts — no key for either exists yet.
+
+## License
+
+[MIT](LICENSE).
