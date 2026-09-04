@@ -13,6 +13,8 @@ public enum ErrorCategory {
   CONFLICT,
   /** A referenced id — patient, doctor, procedure, appointment, exam — does not exist. */
   NOT_FOUND,
-  /** Unexpected. Everything that is not one of the three above. */
+  /** This client address has been throttled — see RateLimitFilter. */
+  RATE_LIMITED,
+  /** Unexpected. Everything that is not one of the four above. */
   SYSTEM
 }

@@ -3,9 +3,13 @@ package dev.jefersonsiqueira.clinicflow.common;
 import dev.jefersonsiqueira.clinicflow.appointment.DoubleBookingException;
 import dev.jefersonsiqueira.clinicflow.doctor.DuplicateDoctorException;
 import dev.jefersonsiqueira.clinicflow.patient.DuplicatePatientException;
+import dev.jefersonsiqueira.clinicflow.ratelimit.ClientAddressResolver;
+import dev.jefersonsiqueira.clinicflow.ratelimit.RateLimitedException;
 import dev.jefersonsiqueira.clinicflow.validation.brdoc.DocumentValidationException;
 import io.opentelemetry.api.trace.Span;
 import io.quarkus.logging.Log;
+import io.vertx.core.http.HttpServerRequest;
+import jakarta.inject.Inject;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Context;
@@ -24,11 +28,11 @@ import java.util.NoSuchElementException;
  * the log.
  *
  * What is logged is deliberately thin on values: the exception type, the
- * field name, the category, the caller's IP and the path — never the value
- * that failed. A rejected CPF or email is still personal data even when
- * invalid, and this service is reachable from a public sandbox — the brdoc
- * lesson applies here just as much as it did there. Every line carries the
- * request's OpenTelemetry trace id via the log format in
+ * field name, the category, the caller's address and the path — never the
+ * value that failed. A rejected CPF or email is still personal data even
+ * when invalid, and this service is reachable from a public sandbox — the
+ * brdoc lesson applies here just as much as it did there. Every line carries
+ * the request's OpenTelemetry trace id via the log format in
  * application.properties, which is what actually makes "who hit this, when,
  * with what" answerable without logging the request body itself.
  */
@@ -37,6 +41,9 @@ public class GlobalExceptionMapper implements ExceptionMapper<Exception> {
 
   @Context UriInfo uriInfo;
   @Context HttpHeaders headers;
+  @Context HttpServerRequest vertxRequest;
+
+  @Inject ClientAddressResolver addressResolver;
 
   @Override
   public Response toResponse(Exception exception) {
@@ -46,6 +53,10 @@ public class GlobalExceptionMapper implements ExceptionMapper<Exception> {
           case DuplicatePatientException e -> error(409, ErrorCategory.CONFLICT, "cpf", e.getMessage());
           case DuplicateDoctorException e -> error(409, ErrorCategory.CONFLICT, e.field(), e.getMessage());
           case DoubleBookingException e -> error(409, ErrorCategory.CONFLICT, "startsAt", e.getMessage());
+          case RateLimitedException e ->
+              Response.fromResponse(error(429, ErrorCategory.RATE_LIMITED, null, e.getMessage()))
+                  .header("Retry-After", "1")
+                  .build();
           case ConstraintViolationException e -> {
             var first = e.getConstraintViolations().iterator().next();
             yield error(422, ErrorCategory.VALIDATION, first.getPropertyPath().toString(), first.getMessage());
@@ -82,20 +93,9 @@ public class GlobalExceptionMapper implements ExceptionMapper<Exception> {
     return uriInfo == null ? null : uriInfo.getPath();
   }
 
-  /**
-   * Best-effort caller identity for the log line, never the response body.
-   *
-   * {@code X-Forwarded-For} is exactly as trustworthy as whatever sits in
-   * front of this service makes it — spoofable by any direct caller unless a
-   * trusted reverse proxy is guaranteed to set it and strip any client-
-   * supplied copy first. Render fronts with Cloudflare, the same as brdoc,
-   * but this service has not yet been configured to trust that header the
-   * principled way brdoc's TRUSTED_PLATFORM does — worth doing before this
-   * value is relied on for anything beyond "which client hit this during an
-   * investigation", which is what it is used for today.
-   */
   private String requester() {
-    String forwarded = headers == null ? null : headers.getHeaderString("X-Forwarded-For");
-    return forwarded != null ? forwarded : "unknown";
+    String cfConnectingIp = headers == null ? null : headers.getHeaderString("CF-Connecting-IP");
+    String remoteAddress = vertxRequest == null ? null : vertxRequest.remoteAddress().hostAddress();
+    return addressResolver.resolve(cfConnectingIp, remoteAddress);
   }
 }

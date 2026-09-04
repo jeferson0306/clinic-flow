@@ -8,9 +8,11 @@ Document validation (CPF, email, phone, postcode format) is delegated to the
 deployed [brdoc](https://github.com/jeferson0306/brdoc) service over HTTP
 rather than reimplemented — see `docs/adr/0002-brdoc-over-http-not-reimplemented.md`.
 `README.md` has the full roadmap; `patient`, `doctor`, `procedure`, `exam`,
-`appointment` and `calendar` exist so far. Every resource runs on a virtual
-thread (`@RunOnVirtualThread`); every request carries an OpenTelemetry trace
-id into its logs and back as `X-Trace-Id`.
+`appointment`, `calendar` and `ratelimit` exist so far. Every resource runs
+on a virtual thread (`@RunOnVirtualThread`); every request carries an
+OpenTelemetry trace id into its logs and back as `X-Trace-Id`, and is
+throttled per client address by a token bucket (`ratelimit/`) before it
+reaches routing.
 
 ## Running
 
@@ -74,13 +76,21 @@ export PATH="$JAVA_HOME/bin:$PATH"
   change to `validation/`; that is how two of the notes above were found.
 - **Test data must be unique across the whole suite, not just within one
   test method.** `@QuarkusTest` does not roll back between tests, and every
-  test class in this project shares one Postgres container for the whole
-  `mvn test` run — a fixed CPF or licence number literal reused across test
-  *methods*, or across *classes* (`PatientResourceTest` and
-  `AppointmentResourceTest` both create a patient, `DoctorResourceTest` and
-  `AppointmentResourceTest` both create a doctor), collides on the real
-  unique constraint. Generate anything that has to be unique
-  (`AppointmentResourceTest.unique()`) rather than hard-coding it.
+  `*IT` class shares one Postgres container for the whole Failsafe run — a
+  fixed CPF or licence number literal reused across test *methods*, or
+  across *classes* (`PatientResourceIT` and `AppointmentResourceIT` both
+  create a patient, `DoctorResourceIT` and `AppointmentResourceIT` both
+  create a doctor), collides on the real unique constraint. Generate
+  anything that has to be unique (`AppointmentResourceIT.unique()`) rather
+  than hard-coding it.
+- **The same sharing applies to `RateLimitFilter`'s buckets, keyed by client
+  address.** Every `*IT` class also shares one JVM and therefore one address
+  (loopback) — dozens of unrelated test methods drawing against the same
+  bucket the way real callers behind one NAT would. `%test.clinic.rate-limit.*`
+  is set to a number the whole suite will never reach; the one test that
+  actually exercises throttling, `RateLimitFilterIT`, overrides it back down
+  via `@TestProfile`, which boots that class its own, separate application
+  context rather than sharing the rest of the suite's.
 - **brdoc's timeouts are 5s connect / 20s read, not shorter.** brdoc runs on
   Render's free tier and sleeps after 15 minutes idle, same as this service
   will. A cold start there was clocked taking longer than a short timeout

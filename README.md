@@ -85,6 +85,7 @@ flowchart TB
             ADDRESS["AddressLookupService"]
             MAPPER["GlobalExceptionMapper"]
             TRACE["TraceIdResponseFilter"]
+            RATELIMIT["RateLimitFilter<br/>token bucket per client address"]
         end
     end
 
@@ -135,11 +136,13 @@ flowchart TB
 
     presentation -.->|every uncaught exception| MAPPER
     presentation -.->|every response| TRACE
+    RATELIMIT -.->|before routing, @PreMatching| presentation
+    RATELIMIT -.->|throttled| MAPPER
 
     classDef ext fill:#f3f4f6,stroke:#9ca3af,color:#111827
     classDef cross fill:#fef3c7,stroke:#d97706,color:#111827
     class BRDOC,VIACEP,PG ext
-    class VALIDATOR,ADDRESS,MAPPER,TRACE cross
+    class VALIDATOR,ADDRESS,MAPPER,TRACE,RATELIMIT cross
 ```
 
 Solid arrows are calls made on every request through that path; dashed
@@ -164,6 +167,8 @@ validation/brdoc/     the brdoc REST client and the DocumentValidator every
 validation/viacep/    the ViaCEP REST client
 common/               the one exception mapper every module's errors go through,
                       the CPF-masking helper, and the trace-id response filter
+ratelimit/            token-bucket rate limiting and the client-address resolver
+                      GlobalExceptionMapper's logging also goes through
 ```
 
 ## Concurrency and observability
@@ -211,13 +216,31 @@ Every error this API returns — however it happened — comes back through
 | `SYSTEM` | Unexpected — everything else | brdoc timed out |
 
 Every rejection is also logged at the point `GlobalExceptionMapper` decides
-it — status, exception type, the caller's IP (from `X-Forwarded-For`, best-
-effort until a trusted-proxy config like brdoc's `TRUSTED_PLATFORM` is added
-here too) and the path — tagged with the same trace id as the response, via
-`quarkus.log.console.format`. A `SYSTEM` error additionally logs the full
-exception. Never logged, in any category: the value that was rejected — a
-CPF is still personal data even when invalid, and this service is reachable
-from a public sandbox.
+it — status, exception type, the caller's address, and the path — tagged
+with the same trace id as the response, via `quarkus.log.console.format`.
+A `SYSTEM` error additionally logs the full exception. Never logged, in any
+category: the value that was rejected — a CPF is still personal data even
+when invalid, and this service is reachable from a public sandbox.
+
+### Rate limiting
+
+A token bucket per client address (`ratelimit/`), same shape as brdoc's own:
+in memory, not Redis — the work being protected (a JPA insert, a call to
+brdoc) is already cheaper than a network round trip would be to guard it.
+Default 20 requests/second, burst of 60, both overridable
+(`clinic.rate-limit.requests-per-second`, `...burst`). `/q/health` is exempt,
+so a monitor never reports an outage that is not happening. A throttled
+request gets a 429 in the same `ApiError` shape as everything else
+(`category: RATE_LIMITED`) with `Retry-After: 1`.
+
+"Client address" means the same thing here as in the error log above —
+resolved once, by `ClientAddressResolver`, and shared by both. `TRUSTED_PLATFORM=cloudflare`
+(hardcoded in `%prod`, since it is a fact about Render, not a secret) reads
+`CF-Connecting-IP`, which Cloudflare sets on every request and a direct
+caller cannot forge; unset, the connection's own remote address is used,
+which collapses everyone behind one proxy into a single bucket but is never
+spoofable. This is the same principled approach as brdoc's own
+`TRUSTED_PLATFORM`, deliberately — including the env var's name.
 
 ## Roadmap
 
