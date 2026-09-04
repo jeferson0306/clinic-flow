@@ -9,11 +9,10 @@ animejs, PT/EN/ES) is a separate app consuming this API.
 
 ## Status
 
-**Phase 0 — architecture and one vertical slice.** Patient registration is
-real end to end: validated against [brdoc](https://github.com/jeferson0306/brdoc)
-over HTTP, address auto-filled from ViaCEP, stored in Postgres via Flyway-
-managed schema, CPF masked in every response. Nothing else in the roadmap
-below exists yet.
+**Phase 1 — patients and doctors.** Both register end to end: validated
+against [brdoc](https://github.com/jeferson0306/brdoc) over HTTP, stored in
+Postgres via Flyway-managed schema, CPF masked in every response. Patient
+registration also auto-fills the address from ViaCEP.
 
 ## Architecture
 
@@ -32,6 +31,7 @@ down — see `AddressLookupService`.
 
 ```
 patient/            entity, repository, service, REST resource, DTOs
+doctor/              same shape as patient/, plus a licence number
 address/            the embeddable Address value object + the ViaCEP lookup
 validation/brdoc/   the brdoc REST client and the DocumentValidator every
                      module validates through
@@ -44,8 +44,7 @@ common/             the one exception mapper every module's errors go through
 Each phase is a real, working increase in scope — not scaffolding for its own
 sake. In the order they will be built:
 
-1. **Patients & doctors** *(patients: done)* — doctor registration,
-   specialties, both validated the same way.
+1. ~~**Patients & doctors**~~ — done.
 2. **Clinical operations** — procedure catalogue, exam records, appointments
    tying patient + doctor + procedure + time slot together, with a doctor
    double-booking rejected at the database, not just in application code.
@@ -93,7 +92,7 @@ document values, and a ViaCEP outage never blocks registration.
 
 ## Deployment
 
-Not deployed yet. The plan, once Phase 0 is reviewed:
+Not deployed yet. The plan, once this phase is reviewed:
 
 - **Database:** Neon Postgres. `DATABASE_URL`, `DATABASE_USER`,
   `DATABASE_PASSWORD` as Render environment variables — see

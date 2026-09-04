@@ -1,5 +1,6 @@
 package dev.jefersonsiqueira.clinicflow.common;
 
+import dev.jefersonsiqueira.clinicflow.doctor.DuplicateDoctorException;
 import dev.jefersonsiqueira.clinicflow.patient.DuplicatePatientException;
 import dev.jefersonsiqueira.clinicflow.validation.brdoc.DocumentValidationException;
 import io.quarkus.logging.Log;
@@ -32,6 +33,8 @@ public class GlobalExceptionMapper implements ExceptionMapper<Exception> {
       }
       case DuplicatePatientException e ->
           Response.status(409).entity(new ApiError("cpf", e.getMessage())).build();
+      case DuplicateDoctorException e ->
+          Response.status(409).entity(new ApiError(e.field(), e.getMessage())).build();
       case ConstraintViolationException e -> {
         var first = e.getConstraintViolations().iterator().next();
         yield Response.status(422)

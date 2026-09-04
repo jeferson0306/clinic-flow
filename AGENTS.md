@@ -7,7 +7,7 @@ deployable (a modulith — see `docs/adr/0001-modulith-not-microservices.md`).
 Document validation (CPF, email, phone, postcode format) is delegated to the
 deployed [brdoc](https://github.com/jeferson0306/brdoc) service over HTTP
 rather than reimplemented — see `docs/adr/0002-brdoc-over-http-not-reimplemented.md`.
-`README.md` has the full roadmap; only the `patient` module exists so far.
+`README.md` has the full roadmap; `patient` and `doctor` exist so far.
 
 ## Running
 
@@ -48,6 +48,13 @@ export PATH="$JAVA_HOME/bin:$PATH"
   real — a CI run should not depend on either being awake. Manual smoke
   testing against the real services is still worth doing before trusting a
   change to `validation/`; that is how the note above was found.
+- **brdoc's timeouts are 5s connect / 20s read, not shorter.** brdoc runs on
+  Render's free tier and sleeps after 15 minutes idle, same as this service
+  will. A cold start there was clocked taking longer than a short timeout
+  tolerates while testing the doctor module manually — 5s turned a slow but
+  legitimate registration into a 500. If this keeps being a problem once
+  there is real traffic, the fix is keeping brdoc warm (a scheduled ping), not
+  a shorter timeout.
 - **The CPF in every API response is masked** to its last two digits
   (`PatientResponse.mask`) — this module is reachable from a public sandbox.
   Do not add an endpoint that returns the unmasked value.

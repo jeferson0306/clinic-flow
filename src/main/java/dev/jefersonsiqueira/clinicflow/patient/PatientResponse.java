@@ -1,6 +1,7 @@
 package dev.jefersonsiqueira.clinicflow.patient;
 
 import dev.jefersonsiqueira.clinicflow.address.Address;
+import dev.jefersonsiqueira.clinicflow.common.DocumentMasking;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
@@ -26,15 +27,11 @@ public record PatientResponse(
     return new PatientResponse(
         patient.id,
         patient.fullName,
-        mask(patient.cpf),
+        DocumentMasking.maskCpf(patient.cpf),
         patient.email,
         patient.phone,
         patient.birthDate,
         patient.address,
         patient.createdAt);
-  }
-
-  private static String mask(String cpf) {
-    return "*".repeat(cpf.length() - 2) + cpf.substring(cpf.length() - 2);
   }
 }
