@@ -256,6 +256,29 @@ docker-compose file to keep in sync with the schema by hand.
 Swagger UI: http://localhost:8080/q/swagger-ui
 Health: http://localhost:8080/q/health
 
+### Seed data
+
+An empty clinic is not much to look at. `scripts/seed.py` (stdlib only, no
+dependency to install) fills a running instance through the API itself —
+`POST /v1/patients`, `/v1/doctors`, and so on — the same way a real client
+would, so every row has already passed brdoc's validation and Postgres's
+double-booking constraint:
+
+```bash
+python3 scripts/seed.py                       # http://localhost:8080
+python3 scripts/seed.py https://clinic-flow.onrender.com
+```
+
+Produces 5 procedures, 8 doctors, 15 patients and around a dozen appointments.
+No real person's data anywhere in it: CPFs are generated with the same public
+mod-11 check-digit algorithm brdoc validates against — structurally valid,
+never looked up against a registry of real people, which is what "a valid
+mock CPF" means. Postcodes are real (Avenida Paulista, Copacabana, the
+Esplanada dos Ministérios) because a postcode-to-address directory is public
+infrastructure data, not personal data — the same distinction
+`AddressLookupService` already draws. Names are common, generic ones, picked
+for variety.
+
 ## Testing
 
 Two kinds, kept apart by Maven's own naming convention rather than by hand:
