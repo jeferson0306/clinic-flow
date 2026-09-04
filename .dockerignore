@@ -1,5 +1,13 @@
-*
-!target/*-runner
-!target/*-runner.jar
-!target/lib/*
-!target/quarkus-app/*
+# The multi-stage Dockerfile builds from source (pom.xml, .mvn, mvnw, src),
+# unlike Quarkus's own generated Dockerfile.jvm/.native which expect a
+# pre-built target/ — this repo's Dockerfile does the Maven build itself, so
+# it needs the source in its context. Everything that build produces or that
+# the build never needs is excluded instead.
+.git
+target
+docs
+*.md
+.github
+.idea
+.vscode
+*.iml
