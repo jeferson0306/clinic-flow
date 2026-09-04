@@ -13,6 +13,7 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.net.URI;
+import java.util.List;
 import java.util.UUID;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.media.Content;
@@ -131,6 +132,42 @@ public class PatientResource {
     return Response.created(URI.create("/v1/patients/" + patient.id))
         .entity(PatientResponse.from(patient))
         .build();
+  }
+
+  @GET
+  @Operation(
+      summary = "List every patient",
+      description = "Newest first. No pagination — see PatientService.listAll's javadoc.")
+  @APIResponse(
+      responseCode = "200",
+      description = "Every registered patient, CPF masked.",
+      content =
+          @Content(
+              examples =
+                  @ExampleObject(
+                      name = "success",
+                      value =
+                          """
+                          [
+                            {
+                              "id": "ef10c843-3fa7-46f2-90ba-daebc8d3edc7",
+                              "fullName": "Ana Souza",
+                              "maskedCpf": "*********25",
+                              "email": "ana@example.com",
+                              "phone": "61991946758",
+                              "birthDate": "1990-05-10",
+                              "address": {
+                                "postcode": "01310200",
+                                "street": "Avenida Paulista",
+                                "district": "Bela Vista",
+                                "city": "São Paulo",
+                                "state": "SP"
+                              },
+                              "createdAt": "2026-09-04T14:41:46.722547Z"
+                            }
+                          ]""")))
+  public List<PatientResponse> listAll() {
+    return service.listAll().stream().map(PatientResponse::from).toList();
   }
 
   @GET

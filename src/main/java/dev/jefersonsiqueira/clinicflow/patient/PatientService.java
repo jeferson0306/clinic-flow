@@ -7,6 +7,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import java.time.Instant;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 
@@ -48,5 +49,15 @@ public class PatientService {
 
   public Patient findById(UUID id) {
     return patients.findByIdOptional(id).orElseThrow(NoSuchElementException::new);
+  }
+
+  /**
+   * Every patient, newest first. No pagination: this is a demo dataset,
+   * measured in tens of rows, not the kind of table a real clinic's history
+   * would eventually become — that is a real constraint to add when the
+   * dataset it is sized for actually exists, not before.
+   */
+  public List<Patient> listAll() {
+    return patients.listAll(io.quarkus.panache.common.Sort.by("createdAt").descending());
   }
 }

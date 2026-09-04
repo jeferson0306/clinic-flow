@@ -5,6 +5,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import java.time.Instant;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 
@@ -42,5 +43,10 @@ public class DoctorService {
 
   public Doctor findById(UUID id) {
     return doctors.findByIdOptional(id).orElseThrow(NoSuchElementException::new);
+  }
+
+  /** Every doctor, newest first — see PatientService.listAll's javadoc for why no pagination yet. */
+  public List<Doctor> listAll() {
+    return doctors.listAll(io.quarkus.panache.common.Sort.by("createdAt").descending());
   }
 }

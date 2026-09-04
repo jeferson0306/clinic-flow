@@ -13,6 +13,7 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.net.URI;
+import java.util.List;
 import java.util.UUID;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.media.Content;
@@ -107,6 +108,33 @@ public class DoctorResource {
     return Response.created(URI.create("/v1/doctors/" + doctor.id))
         .entity(DoctorResponse.from(doctor))
         .build();
+  }
+
+  @GET
+  @Operation(summary = "List every doctor", description = "Newest first. No pagination yet.")
+  @APIResponse(
+      responseCode = "200",
+      description = "Every registered doctor, CPF masked.",
+      content =
+          @Content(
+              examples =
+                  @ExampleObject(
+                      name = "success",
+                      value =
+                          """
+                          [
+                            {
+                              "id": "6cab716f-248f-43e7-b623-910349045d8e",
+                              "fullName": "Dr. Marcos Lima",
+                              "maskedCpf": "*********25",
+                              "email": "marcos@example.com",
+                              "specialty": "Cardiology",
+                              "licenseNumber": "12345-SP",
+                              "createdAt": "2026-09-04T17:22:22.948127Z"
+                            }
+                          ]""")))
+  public List<DoctorResponse> listAll() {
+    return service.listAll().stream().map(DoctorResponse::from).toList();
   }
 
   @GET
