@@ -142,3 +142,24 @@ export PATH="$JAVA_HOME/bin:$PATH"
   a full Quarkus (or at least full Maven dependency) classpath — a bare
   `jshell --class-path <one jar>` is not enough; use
   `mvn dependency:build-classpath` to get the real one first.
+- **LocalStack's SNS ARN and SQS URL are predictable, not returned by
+  anything this app calls.** Account id `000000000000`, region from
+  `clinic.aws.region` — `ExamReportPublisher.TOPIC_ARN` is a hardcoded
+  string built from exactly that, matching the resource names Terraform
+  creates in `infra/terraform/main.tf`. Rename either side and the two
+  silently stop matching; nothing catches it until a publish 404s.
+- **Port 4566 is LocalStack's own default, which makes it a common
+  collision on a machine already running another project's LocalStack.**
+  Found this exact collision testing S3/SNS/SQS integration by hand —
+  `docker compose up -d` failed with "port is already allocated" because an
+  unrelated project's LocalStack container already held it. The two are
+  otherwise independent (LocalStack namespaces resources by name within one
+  instance), so pointing at whichever instance already has the port during
+  manual verification is fine; just don't tear down a container this
+  project did not start.
+- **AWS SDK v2 clients are lazy — constructing one never makes a network
+  call.** `AwsClients` produces `S3Client`/`SnsClient`/`SqsClient`
+  unconditionally regardless of `clinic.aws.enabled`, and that is safe for
+  exactly this reason; only `ExamReportPublisher`/`ExamNotificationConsumer`
+  actually invoking an operation would reach the network, and both check the
+  flag themselves before doing so.

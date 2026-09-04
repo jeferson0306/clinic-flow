@@ -285,6 +285,46 @@ same keypair as production's), while `%prod` reads it from a Render
 — a mounted path, not an env var, because a multi-line PEM does not belong
 in a single-line value.
 
+## Infrastructure: S3 + SNS + SQS via LocalStack
+
+The one place this API talks to AWS: `ExamService.recordResult` hands the
+finished exam off to `ExamReportPublisher`, which archives it as a text
+report to S3 and publishes an SNS notification. `ExamNotificationConsumer`
+polls the SQS queue Terraform subscribes to that topic and logs what it
+receives — standing in for the real notification service a clinic would run
+(email/SMS to the patient). Neither class references the other; the
+SNS→SQS subscription is the only thing connecting them, which is the point
+of the fan-out pattern.
+
+This is plain AWS SDK v2 (`AwsClients`), not a Quarkus/Quarkiverse
+extension — see its javadoc for why, including the one real tradeoff: no Dev
+Services auto-provisioning of LocalStack the way `quarkus-jdbc-postgresql`
+auto-provisions Postgres. Off everywhere by default; `%dev` turns it on,
+`%test` and `%prod` do not — see `application.properties`'s own comment on
+why each of those three needs a different answer.
+
+```bash
+docker compose up -d                              # starts LocalStack (S3, SNS, SQS)
+cd infra/terraform && terraform init && terraform apply
+cd ../.. && ./mvnw quarkus:dev                     # clinic.aws.enabled=true in %dev
+```
+
+Verify it end to end: record a result on an exam (`POST /v1/exams/{id}/result`),
+then
+
+```bash
+aws --endpoint-url=http://localhost:4566 s3 ls s3://clinic-flow-exam-reports/exams/
+```
+
+should list a new `<exam-id>.txt`, and the running `quarkus:dev` process's
+own log should show `ExamNotificationConsumer` receiving the matching SNS
+message within its 10-second poll interval.
+
+Not covered by `mvn verify` — `@QuarkusTest` has no LocalStack of its own
+here, the same "mocked in the IT suite, checked for real by hand" split
+brdoc and ViaCEP already use for the third parties they call. The check
+above is the real one.
+
 ## Roadmap
 
 Each phase is a real, working increase in scope — not scaffolding for its own
@@ -309,8 +349,11 @@ sake. In the order they will be built:
    endpoint already wired up, health checks that actually check the
    dependencies (database, brdoc, payment provider) rather than just
    answering 200.
-7. **Frontend** — Next.js, GSAP, animejs, i18n in PT/EN/ES, calling this API.
-   Deployed separately (Vercel), same split as the validator's own playground.
+7. ~~**Frontend**~~ — done: [clinic-flow-web](https://github.com/jeferson0306/clinic-flow-web),
+   Next.js + React, GSAP, i18n in PT/EN/ES, calling this API. Deployed
+   separately (Vercel), same split as the validator's own playground.
+8. ~~**Cloud infrastructure**~~ — done: S3 + SNS + SQS via LocalStack and
+   Terraform — see [Infrastructure](#infrastructure-s3--sns--sqs-via-localstack).
 
 ## Running locally
 

@@ -1,6 +1,7 @@
 package dev.jefersonsiqueira.clinicflow.exam;
 
 import dev.jefersonsiqueira.clinicflow.doctor.DoctorService;
+import dev.jefersonsiqueira.clinicflow.notification.ExamReportPublisher;
 import dev.jefersonsiqueira.clinicflow.patient.PatientService;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -16,6 +17,7 @@ public class ExamService {
   @Inject ExamRepository exams;
   @Inject PatientService patients;
   @Inject DoctorService doctors;
+  @Inject ExamReportPublisher reportPublisher;
 
   @Transactional
   public Exam request(RequestExamRequest request) {
@@ -40,6 +42,10 @@ public class ExamService {
     Exam exam = findById(examId);
     exam.result = request.result().trim();
     exam.resultRecordedAt = Instant.now();
+    // Archival + notification, not part of what makes this write correct —
+    // see ExamReportPublisher's own javadoc for why it never throws back
+    // into this method.
+    reportPublisher.publish(exam);
     return exam;
   }
 
