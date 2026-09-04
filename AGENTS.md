@@ -38,6 +38,15 @@ export PATH="$JAVA_HOME/bin:$PATH"
 
 ## Non-obvious notes
 
+- **A Docker build failing the Maven Wrapper's checksum with "your Maven
+  distribution might be compromised" is not necessarily what it says.** If
+  the base image lacks `unzip`, the wrapper silently falls back from its
+  pinned `.zip` to a `.tar.gz` of the same release, and does not recompute
+  the checksum it then verifies against — the pin is for the `.zip`, the
+  file downloaded is the `.tar.gz`, and they legitimately differ. Verify the
+  pinned SHA-256 against Maven Central independently before assuming the
+  distribution itself is bad; `Dockerfile` installs `unzip` alongside `curl`
+  for exactly this reason.
 - **The `quarkus-opentelemetry` extension pulls a ~600MB Grafana LGTM
   container (Loki/Grafana/Tempo/Mimir) into Dev Services the moment it is on
   the classpath**, even with `quarkus.otel.traces.exporter=none` — that
