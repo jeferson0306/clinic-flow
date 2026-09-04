@@ -13,6 +13,7 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.net.URI;
+import java.util.List;
 import java.util.UUID;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.media.Content;
@@ -144,5 +145,32 @@ public class ExamResource {
   @APIResponse(responseCode = "404", description = "No exam with this id")
   public ExamResponse findById(@PathParam("id") UUID id) {
     return ExamResponse.from(service.findById(id));
+  }
+
+  @GET
+  @Operation(summary = "List every exam", description = "Newest first (by requestedAt). No pagination yet.")
+  @APIResponse(
+      responseCode = "200",
+      description = "Every exam, resulted or still pending.",
+      content =
+          @Content(
+              examples =
+                  @ExampleObject(
+                      name = "success",
+                      value =
+                          """
+                          [
+                            {
+                              "id": "3e5f7a10-2b1c-4e6d-9a8f-1234567890ab",
+                              "patientId": "ef10c843-3fa7-46f2-90ba-daebc8d3edc7",
+                              "requestedByDoctorId": "6cab716f-248f-43e7-b623-910349045d8e",
+                              "type": "Complete blood count",
+                              "requestedAt": "2026-09-04T18:00:00Z",
+                              "result": null,
+                              "resultRecordedAt": null
+                            }
+                          ]""")))
+  public List<ExamResponse> listAll() {
+    return service.listAll().stream().map(ExamResponse::from).toList();
   }
 }

@@ -14,6 +14,7 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.net.URI;
+import java.util.List;
 import java.util.UUID;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.media.Content;
@@ -158,5 +159,32 @@ public class AppointmentResource {
   @APIResponse(responseCode = "404", description = "No appointment with this id")
   public AppointmentResponse findById(@PathParam("id") UUID id) {
     return AppointmentResponse.from(service.findById(id));
+  }
+
+  @GET
+  @Operation(summary = "List every appointment", description = "Newest first. No pagination yet.")
+  @APIResponse(
+      responseCode = "200",
+      description = "Every appointment, scheduled and cancelled alike.",
+      content =
+          @Content(
+              examples =
+                  @ExampleObject(
+                      name = "success",
+                      value =
+                          """
+                          [
+                            {
+                              "id": "172ef31c-091d-4aac-9f57-2041f3a1d842",
+                              "patientId": "ef10c843-3fa7-46f2-90ba-daebc8d3edc7",
+                              "doctorId": "6cab716f-248f-43e7-b623-910349045d8e",
+                              "procedureId": "f896f53f-3ae0-4d71-b08e-4dc247f2fa98",
+                              "startsAt": "2026-09-10T11:00:00Z",
+                              "endsAt": "2026-09-10T11:30:00Z",
+                              "status": "SCHEDULED"
+                            }
+                          ]""")))
+  public List<AppointmentResponse> listAll() {
+    return service.listAll().stream().map(AppointmentResponse::from).toList();
   }
 }

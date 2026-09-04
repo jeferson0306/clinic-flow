@@ -9,6 +9,7 @@ import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 import org.hibernate.exception.ConstraintViolationException;
@@ -80,5 +81,10 @@ public class AppointmentService {
 
   public Appointment findById(UUID id) {
     return appointments.findByIdOptional(id).orElseThrow(NoSuchElementException::new);
+  }
+
+  /** Every appointment, newest first — see PatientService.listAll's javadoc for why no pagination yet. */
+  public List<Appointment> listAll() {
+    return appointments.listAll(io.quarkus.panache.common.Sort.by("createdAt").descending());
   }
 }
