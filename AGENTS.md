@@ -7,16 +7,22 @@ deployable (a modulith — see `docs/adr/0001-modulith-not-microservices.md`).
 Document validation (CPF, email, phone, postcode format) is delegated to the
 deployed [brdoc](https://github.com/jeferson0306/brdoc) service over HTTP
 rather than reimplemented — see `docs/adr/0002-brdoc-over-http-not-reimplemented.md`.
-`README.md` has the full roadmap; `patient`, `doctor`, `procedure`, `exam`
-and `appointment` exist so far.
+`README.md` has the full roadmap; `patient`, `doctor`, `procedure`, `exam`,
+`appointment` and `calendar` exist so far. Every resource runs on a virtual
+thread (`@RunOnVirtualThread`); every request carries an OpenTelemetry trace
+id into its logs and back as `X-Trace-Id`.
 
 ## Running
 
 ```bash
 ./mvnw quarkus:dev   # needs Docker — Dev Services starts a real Postgres
-./mvnw test           # brdoc and ViaCEP are mocked; no network needed
-./mvnw verify          # what CI runs
+./mvnw test           # *Test.java, Surefire — unit only, no Docker, seconds
+./mvnw verify          # + *IT.java, Failsafe — @QuarkusTest, real Postgres
 ```
+
+Naming a new test class `*Test` vs `*IT` is not cosmetic: Surefire and
+Failsafe pick them up by that suffix alone (see `pom.xml`'s
+`<skipITs>false</skipITs>`), and it decides whether the test needs Docker.
 
 Swagger UI: `http://localhost:8080/q/swagger-ui` · Health: `/q/health`.
 
@@ -32,6 +38,14 @@ export PATH="$JAVA_HOME/bin:$PATH"
 
 ## Non-obvious notes
 
+- **The `quarkus-opentelemetry` extension pulls a ~600MB Grafana LGTM
+  container (Loki/Grafana/Tempo/Mimir) into Dev Services the moment it is on
+  the classpath**, even with `quarkus.otel.traces.exporter=none` — that
+  property only controls where finished spans are *exported*, not whether
+  Dev Services starts a collector to export them to. The actual switch is
+  `quarkus.observability.enabled=false`. Found by `quarkus:dev` downloading
+  several hundred MB on startup for no reason anything in this project asked
+  for.
 - **A REST client returning `Response` still throws on brdoc's 422s, by
   itself.** The MicroProfile REST Client spec mandates a default exception
   mapper that fires on any status ≥ 400, and this applies *before* your

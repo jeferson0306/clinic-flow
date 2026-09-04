@@ -1,5 +1,6 @@
 package dev.jefersonsiqueira.clinicflow.appointment;
 
+import io.smallrye.common.annotation.RunOnVirtualThread;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
@@ -17,6 +18,11 @@ import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 
 @Path("/v1/appointments")
 @Produces(MediaType.APPLICATION_JSON)
+// Every endpoint here blocks on JPA and, some of them, on brdoc over HTTP.
+// @RunOnVirtualThread means that blocking costs a virtual thread parked by the
+// JVM, not one of the small number of platform threads Quarkus's event loop
+// runs on — the same throughput a fully reactive rewrite would buy, without one.
+@RunOnVirtualThread
 public class AppointmentResource {
 
   @Inject AppointmentService service;

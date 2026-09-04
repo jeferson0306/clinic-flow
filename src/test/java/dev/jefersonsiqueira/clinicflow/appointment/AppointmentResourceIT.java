@@ -25,7 +25,7 @@ import org.junit.jupiter.api.Test;
  * them.
  */
 @QuarkusTest
-class AppointmentResourceTest {
+class AppointmentResourceIT {
 
   @InjectMock @RestClient BrdocClient brdoc;
 

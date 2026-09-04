@@ -9,7 +9,7 @@ import io.restassured.http.ContentType;
 import org.junit.jupiter.api.Test;
 
 @QuarkusTest
-class ProcedureResourceTest {
+class ProcedureResourceIT {
 
   @Test
   void createsAndListsAProcedure() {

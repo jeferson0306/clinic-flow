@@ -16,7 +16,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 @QuarkusTest
-class DoctorResourceTest {
+class DoctorResourceIT {
 
   @InjectMock @RestClient BrdocClient brdoc;
 

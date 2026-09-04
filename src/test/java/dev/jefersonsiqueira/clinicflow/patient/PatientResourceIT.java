@@ -28,7 +28,7 @@ import org.junit.jupiter.api.Test;
  * from it is handled correctly.
  */
 @QuarkusTest
-class PatientResourceTest {
+class PatientResourceIT {
 
   @InjectMock @RestClient BrdocClient brdoc;
   @InjectMock @RestClient ViaCepClient viaCep;
