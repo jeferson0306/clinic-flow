@@ -7,6 +7,8 @@ package dev.jefersonsiqueira.clinicflow.validation.brdoc;
  */
 public class DocumentValidationException extends RuntimeException {
 
+  private static final long serialVersionUID = 1L;
+
   private final String field;
 
   public DocumentValidationException(String field, String brdocMessage) {

@@ -51,7 +51,7 @@ public class AwsClients {
     // instance profile, whatever the platform actually provides.
     return endpointOverride.isPresent()
         ? StaticCredentialsProvider.create(AwsBasicCredentials.create("test", "test"))
-        : DefaultCredentialsProvider.create();
+        : DefaultCredentialsProvider.builder().build();
   }
 
   @Produces

@@ -8,6 +8,8 @@ package dev.jefersonsiqueira.clinicflow.common;
  * integrity problem, not a convenience worth working around.
  */
 public class ResourceInUseException extends RuntimeException {
+  private static final long serialVersionUID = 1L;
+
   public ResourceInUseException(String message) {
     super(message);
   }
