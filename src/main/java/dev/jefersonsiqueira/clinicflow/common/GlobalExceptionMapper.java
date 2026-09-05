@@ -62,7 +62,13 @@ public class GlobalExceptionMapper implements ExceptionMapper<Exception> {
                   .build();
           case ConstraintViolationException e -> {
             var first = e.getConstraintViolations().iterator().next();
-            yield error(422, ErrorCategory.VALIDATION, first.getPropertyPath().toString(), first.getMessage());
+            // The path for a @Valid body parameter is "methodName.paramName.field"
+            // (e.g. "register.request.fullName"), not the bare field name every
+            // other branch here uses — the leaf segment is what a frontend
+            // actually keys its fieldErrors lookup on.
+            String path = first.getPropertyPath().toString();
+            String field = path.contains(".") ? path.substring(path.lastIndexOf('.') + 1) : path;
+            yield error(422, ErrorCategory.VALIDATION, field, first.getMessage());
           }
           case NoSuchElementException e -> error(404, ErrorCategory.NOT_FOUND, null, "Not found");
           case WebApplicationException e -> e.getResponse();

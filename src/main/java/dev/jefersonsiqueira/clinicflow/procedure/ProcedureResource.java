@@ -26,13 +26,17 @@ import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
 /**
  * {@code @Valid} on a request body is validated by RESTEasy Reactive itself,
- * before a resource method body ever runs — a failure there comes back as a
- * 400 in RESTEasy's own {@code {"title","status","violations"}} shape, not
- * this API's {@link dev.jefersonsiqueira.clinicflow.common.ApiError}. That is
- * deliberate, not an inconsistency to fix: 400 is the request itself being
- * malformed (missing a name, a non-positive duration); 422 is reserved for
- * {@code GlobalExceptionMapper}'s own cases, where the request is well-formed
- * but a business rule this API owns — a document brdoc rejected — says no.
+ * before a resource method body ever runs. Left to its own devices, RESTEasy
+ * Reactive would answer with its own {@code {"title","status","violations"}}
+ * shape instead of this API's {@link
+ * dev.jefersonsiqueira.clinicflow.common.ApiError} — {@code
+ * quarkus-hibernate-validator} registers a mapper for {@code
+ * ValidationException}, which JAX-RS's exception-hierarchy matching always
+ * prefers over {@code GlobalExceptionMapper}'s {@code Exception}. {@link
+ * dev.jefersonsiqueira.clinicflow.common.ConstraintViolationMapper} exists
+ * to win that match back, so a non-positive {@code durationMinutes} or a
+ * blank {@code name} comes back exactly like every other validation failure
+ * on this API: 422, {@code ApiError}, a usable {@code field}.
  */
 @Path("/v1/procedures")
 @Tag(name = "Procedures")
@@ -77,23 +81,19 @@ public class ProcedureResource {
                             "priceCents": 15000
                           }""")))
   @APIResponse(
-      responseCode = "400",
-      description =
-          "durationMinutes or priceCents was not positive, or name was blank — "
-              + "shaped by RESTEasy Reactive, not this API's own error format.",
+      responseCode = "422",
+      description = "durationMinutes or priceCents was not positive, or name was blank.",
       content =
           @Content(
               examples =
                   @ExampleObject(
-                      name = "400",
+                      name = "422",
                       value =
                           """
                           {
-                            "title": "Constraint Violation",
-                            "status": 400,
-                            "violations": [
-                              {"field": "create.request.durationMinutes", "message": "must be greater than 0"}
-                            ]
+                            "field": "durationMinutes",
+                            "message": "must be greater than 0",
+                            "category": "VALIDATION"
                           }""")))
   public Response create(@Valid CreateProcedureRequest request) {
     Procedure procedure = service.create(request);

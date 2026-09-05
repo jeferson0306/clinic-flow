@@ -1,6 +1,7 @@
 package dev.jefersonsiqueira.clinicflow.procedure;
 
 import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.is;
 
@@ -36,9 +37,6 @@ class ProcedureResourceIT {
 
   @Test
   void rejectsANonPositiveDuration() {
-    // 400, not this API's own 422: a @Valid failure on the request body is
-    // caught and shaped by RESTEasy Reactive itself before GlobalExceptionMapper
-    // ever sees it — see the note in ProcedureResource.
     given()
         .contentType(ContentType.JSON)
         .body("""
@@ -47,7 +45,8 @@ class ProcedureResourceIT {
         .when()
         .post("/v1/procedures")
         .then()
-        .statusCode(400);
+        .statusCode(422)
+        .body("field", equalTo("durationMinutes"));
   }
 
   @Test

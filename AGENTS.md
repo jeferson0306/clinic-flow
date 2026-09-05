@@ -170,6 +170,30 @@ export PATH="$JAVA_HOME/bin:$PATH"
   confirmed by checking Render's actual docs page, which never mentions
   `secretFiles` at all. The JWT private key has to be added by hand, after
   the service exists, under Settings → Secret Files.
+- **A `@Valid` request-body failure never reached `GlobalExceptionMapper`,
+  for every resource, since the day it was written — RESTEasy Reactive's own
+  mapper always won instead.** `quarkus-hibernate-validator` registers
+  `ResteasyReactiveViolationExceptionMapper` for `ValidationException`; JAX-RS
+  resolves an exception to the mapper whose declared type is *closest* in the
+  class hierarchy to the exception's actual class, and `ValidationException`
+  (two steps up from what RESTEasy Reactive actually throws) is closer than
+  `GlobalExceptionMapper`'s own `Exception`. The result — RESTEasy's
+  `{title,status,violations}` shape instead of this API's `ApiError`, on
+  every `@Valid` violation — looked enough like a deliberate design choice
+  that an earlier pass documented it as one (see git history on
+  `ProcedureResource`'s class javadoc) rather than catching it as a bug.
+  Found for real by curling the deployed backend directly for an invalid
+  `fullName` and a future `birthDate`, and noticing the frontend's
+  `fieldErrors` lookup was silently never populated for either.
+  `common/ConstraintViolationMapper.java` fixes it by registering explicitly
+  for `ConstraintViolationException` — one step closer than
+  `ValidationException` — which wins the match and hands the exception back
+  to `GlobalExceptionMapper`. The lesson: a passing test suite and a clean
+  `mvn verify` do not catch a JAX-RS provider-specificity bug like this one,
+  because nothing in the suite asserted the *shape* of a validation error,
+  only that non-2xx statuses happened — always verify a new validation
+  constraint against the real running service, not just that Bean Validation
+  itself rejected the input.
 - **pgjdbc does not accept `postgresql://user:password@host/db` — the exact
   shape Neon's own dashboard hands you.** That syntax is libpq/psql's, not
   the JDBC driver's; pgjdbc wants credentials as query parameters:

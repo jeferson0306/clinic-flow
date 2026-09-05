@@ -104,13 +104,8 @@ public class PatientResource {
                             "createdAt": "2026-09-04T14:41:46.722547Z"
                           }""")))
   @APIResponse(
-      responseCode = "400",
-      description =
-          "The request body itself is malformed — a missing field, not a business rule. "
-              + "Shaped by RESTEasy Reactive, not this API's own error format; see ProcedureResource's note.")
-  @APIResponse(
       responseCode = "422",
-      description = "brdoc rejected a document. `field` names which one. Shown here are the two fields that vary by situation; every error additionally carries category, traceId, timestamp and path — see PatientResource's 404 example for the complete shape.",
+      description = "The request body itself is malformed (a missing or badly-shaped field) or brdoc rejected a document — `field` names which one either way. Shown here are the two fields that vary by situation; every error additionally carries category, traceId, timestamp and path — see PatientResource's 404 example for the complete shape.",
       content =
           @Content(
               examples =
