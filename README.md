@@ -345,10 +345,13 @@ sake. In the order they will be built:
    data apart from anything that matters, once there is a "matters" to tell
    it apart from.
 6. **Observability** — structured JSON logs in production
-   (`quarkus-logging-json`), request tracing, metrics beyond the Prometheus
-   endpoint already wired up, health checks that actually check the
-   dependencies (database, brdoc, payment provider) rather than just
-   answering 200.
+   (`quarkus-logging-json`), metrics beyond the Prometheus endpoint already
+   wired up. Health checks that actually check dependencies ~~done~~: `/q/health`
+   reports the database connection (Quarkus's own Agroal integration, free)
+   and brdoc's own `/q/health` reachability (`BrdocHealthCheck`) — the
+   latter always reports `UP` with reachability as data, not status, since a
+   sleeping brdoc is a known, recoverable state (see the class's own
+   javadoc), not this service being unhealthy.
 7. ~~**Frontend**~~ — done: [clinic-flow-web](https://github.com/jeferson0306/clinic-flow-web),
    Next.js + React, GSAP, i18n in PT/EN/ES, calling this API. Deployed
    separately (Vercel), same split as the validator's own playground.
