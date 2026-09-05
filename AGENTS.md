@@ -170,3 +170,11 @@ export PATH="$JAVA_HOME/bin:$PATH"
   confirmed by checking Render's actual docs page, which never mentions
   `secretFiles` at all. The JWT private key has to be added by hand, after
   the service exists, under Settings → Secret Files.
+- **pgjdbc does not accept `postgresql://user:password@host/db` — the exact
+  shape Neon's own dashboard hands you.** That syntax is libpq/psql's, not
+  the JDBC driver's; pgjdbc wants credentials as query parameters:
+  `jdbc:postgresql://host/db?user=...&password=...&sslmode=require`. Found
+  against a real first deploy: the failure surfaces as
+  `FlywaySqlUnableToConnectToDbException` wrapping "Unable to parse URL",
+  which reads like a network/connectivity problem long enough to check the
+  wrong things first — the JDBC URL's own shape is the actual bug.

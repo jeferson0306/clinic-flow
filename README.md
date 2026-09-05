@@ -433,10 +433,15 @@ time to track down (a `.dockerignore` excluding the source it needed to
 build from, and a misleading Maven Wrapper checksum failure actually caused
 by a missing `unzip`).
 
-- **Database:** Neon Postgres. One environment variable, `DATABASE_URL` —
-  Neon's own connection string, `postgresql://` swapped for
-  `jdbc:postgresql://`. Credentials and `sslmode=require` already live inside
-  it; nothing here reconstructs or appends to it.
+- **Database:** Neon Postgres. One environment variable, `DATABASE_URL` — but
+  **not** simply Neon's connection string with `postgresql://` swapped for
+  `jdbc:postgresql://`: pgjdbc rejects the `user:password@host`
+  credentials-in-the-authority syntax libpq/psql URLs use. Move credentials
+  to query parameters instead:
+  `jdbc:postgresql://<host>/<db>?user=<user>&password=<password>&sslmode=require`
+  — see `application.properties`' own comment on this property; confirmed
+  against a real failed deploy whose Flyway error reads like a network
+  problem, not a URL syntax one.
 - **brdoc:** `BRDOC_API_URL`, defaulted in `render.yaml` to the already-
   deployed instance — nothing to configure for a fresh deploy.
 - **JWT signing key:** a Secret File at `/etc/secrets/jwt-private-key.pem` —

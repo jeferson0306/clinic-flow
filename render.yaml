@@ -2,10 +2,16 @@
 #
 # One-click setup: Render dashboard > New > Blueprint > point at this repo.
 # Two things need typing in by hand, neither is a Blueprint field:
-#   - DATABASE_URL (envVars below, sync: false): Neon's own connection
-#     string, "postgresql://" swapped for "jdbc:postgresql://". Render
-#     prompts for sync: false values during the initial Blueprint creation
-#     flow only.
+#   - DATABASE_URL (envVars below, sync: false): NOT simply Neon's own
+#     connection string with "postgresql://" swapped for
+#     "jdbc:postgresql://" — pgjdbc does not accept the
+#     "user:password@host" credentials-in-the-authority syntax libpq/psql
+#     URLs use (confirmed against a real failed deploy: Flyway's own error
+#     buries "Unable to parse URL" under a message that reads like a
+#     network problem). Move credentials to query parameters instead — see
+#     application.properties' own comment on this property for the exact
+#     shape. Render prompts for sync: false values during the initial
+#     Blueprint creation flow only.
 #   - The JWT signing key: there is no "secretFiles" field in the Blueprint
 #     spec — confirmed against Render's own docs after a Blueprint apply
 #     failed with one present. Add it after the service exists, by hand,
