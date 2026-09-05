@@ -45,6 +45,7 @@ public class GlobalExceptionMapper implements ExceptionMapper<Exception> {
   @Context HttpServerRequest vertxRequest;
 
   @Inject ClientAddressResolver addressResolver;
+  @Inject RecentErrorsLog recentErrors;
 
   @Override
   public Response toResponse(Exception exception) {
@@ -88,8 +89,13 @@ public class GlobalExceptionMapper implements ExceptionMapper<Exception> {
   }
 
   // Deliberately not logged for the SYSTEM branch above — that one already logs the
-  // full exception, and logging it twice would just duplicate the stack trace.
+  // full exception, and logging it twice would just duplicate the stack trace. The
+  // ring buffer below has no such exception — a 500 is exactly the outcome the
+  // admin system-health page most needs to show.
   private void logOutcome(Exception exception, int status) {
+    String traceId = Span.current().getSpanContext().getTraceId();
+    recentErrors.record(
+        new RecentErrorsLog.Entry(Instant.now(), status, exception.getClass().getSimpleName(), path(), traceId));
     if (status == 500) {
       return;
     }

@@ -54,4 +54,24 @@ class AuthorizationIT {
   void readsStayPublicWithNoCredentials() {
     given().when().get("/v1/procedures").then().statusCode(200);
   }
+
+  @Test
+  void adminSystemHealthRejectsNoCredentials() {
+    given().when().get("/v1/admin/recent-errors").then().statusCode(401);
+  }
+
+  @Test
+  @TestSecurity(user = "a-doctor", roles = "DOCTOR")
+  void adminSystemHealthRejectsTheWrongRole() {
+    // Recent errors can carry request paths and exception types for every
+    // resource in this service — a DOCTOR has no more business seeing that
+    // than they do writing a procedure.
+    given().when().get("/v1/admin/recent-errors").then().statusCode(403);
+  }
+
+  @Test
+  @TestSecurity(user = "an-admin", roles = "ADMIN")
+  void adminSystemHealthAllowsTheRightRole() {
+    given().when().get("/v1/admin/recent-errors").then().statusCode(200);
+  }
 }
