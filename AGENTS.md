@@ -163,3 +163,10 @@ export PATH="$JAVA_HOME/bin:$PATH"
   exactly this reason; only `ExamReportPublisher`/`ExamNotificationConsumer`
   actually invoking an operation would reach the network, and both check the
   flag themselves before doing so.
+- **There is no `secretFiles` field in the Render Blueprint spec**, despite
+  it looking exactly like the kind of thing that should exist next to
+  `envVars`' `sync: false`. `render.yaml` had one; the Blueprint apply
+  failed with a generic "there was an issue" and no field-level detail —
+  confirmed by checking Render's actual docs page, which never mentions
+  `secretFiles` at all. The JWT private key has to be added by hand, after
+  the service exists, under Settings → Secret Files.
