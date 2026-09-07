@@ -202,3 +202,14 @@ export PATH="$JAVA_HOME/bin:$PATH"
   `FlywaySqlUnableToConnectToDbException` wrapping "Unable to parse URL",
   which reads like a network/connectivity problem long enough to check the
   wrong things first — the JDBC URL's own shape is the actual bug.
+- **A `DocumentValidationException`'s `field` has to match the request
+  record's actual property name, not brdoc's query-param name.**
+  `DocumentValidator.telephone()` reported `field="telephone"` while every
+  patient request record calls it `phone` — the frontend attaches a field
+  error to an input by that name, so a real phone-format rejection from
+  brdoc silently attached to nothing and never rendered. Found by curling
+  the deployed API directly with a bad phone number and reading the raw
+  JSON back, not by trusting the UI. The fix is one string literal; the
+  lesson is to grep every `ApiError.field` value against the frontend's
+  actual `name=` attributes when adding a new validated field, since
+  nothing type-checks that connection across the two repos.

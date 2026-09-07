@@ -29,8 +29,13 @@ public class DocumentValidator {
     return require("email", brdoc.validateEmail(rawValue));
   }
 
+  // Reported as "phone", not brdoc's own "telephone" query param name — this
+  // has to match CreatePatientRequest/UpdatePatientRequest's phone() field so
+  // the frontend can attach the message to the right input. Found live: a
+  // phone validation failure returned field="telephone", which the form
+  // never displayed because no field named that exists on the page.
   public String telephone(String rawValue) {
-    return require("telephone", brdoc.validateTelephone(rawValue));
+    return require("phone", brdoc.validateTelephone(rawValue));
   }
 
   public String cep(String rawValue) {
