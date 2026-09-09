@@ -457,6 +457,10 @@ by a missing `unzip`).
   this repository.
 - **Payments:** Stripe and Mercado Pago in sandbox/test mode only, added when
   the billing phase starts — no key for either exists yet.
+- **Error monitoring:** Sentry, via the plain `io.sentry:sentry` SDK (see
+  `pom.xml`'s comment on why not the Quarkiverse extension) — `SENTRY_DSN`,
+  set by hand in Render's dashboard from the Sentry project's Client Keys.
+  Blank is a safe no-op, not a startup failure.
 
 ## License
 

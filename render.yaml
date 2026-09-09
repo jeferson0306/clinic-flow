@@ -1,7 +1,11 @@
 # Render Blueprint — https://render.com/docs/blueprint-spec
 #
 # One-click setup: Render dashboard > New > Blueprint > point at this repo.
-# Two things need typing in by hand, neither is a Blueprint field:
+# Three things need typing in by hand, none are a Blueprint field:
+#   - SENTRY_DSN (envVars below, sync: false): from the Sentry project's
+#     Settings -> Projects -> Client Keys (DSN). Blank is a safe no-op (see
+#     SentryInitializer) — this is optional, not required for the service
+#     to start.
 #   - DATABASE_URL (envVars below, sync: false): NOT simply Neon's own
 #     connection string with "postgresql://" swapped for
 #     "jdbc:postgresql://" — pgjdbc does not accept the
@@ -32,3 +36,5 @@ services:
         sync: false
       - key: BRDOC_API_URL
         value: https://api-data-validator.onrender.com
+      - key: SENTRY_DSN
+        sync: false

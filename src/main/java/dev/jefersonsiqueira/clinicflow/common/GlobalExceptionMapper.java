@@ -11,6 +11,7 @@ import dev.jefersonsiqueira.clinicflow.ratelimit.RateLimitedException;
 import dev.jefersonsiqueira.clinicflow.validation.brdoc.DocumentValidationException;
 import io.opentelemetry.api.trace.Span;
 import io.quarkus.logging.Log;
+import io.sentry.Sentry;
 import io.vertx.core.http.HttpServerRequest;
 import jakarta.inject.Inject;
 import jakarta.validation.ConstraintViolationException;
@@ -79,6 +80,12 @@ public class GlobalExceptionMapper implements ExceptionMapper<Exception> {
           case WebApplicationException e -> e.getResponse();
           default -> {
             Log.errorf(exception, "unhandled exception: category=%s requester=%s", ErrorCategory.SYSTEM, requester());
+            // Only the genuinely unhandled case — every other branch above is
+            // an expected, already-categorized rejection (a wrong password,
+            // a duplicate CPF), not the kind of surprise an on-call engineer
+            // needs paged for. A no-op when clinic.sentry.dsn is blank (see
+            // SentryInitializer), so this is safe to call unconditionally.
+            Sentry.captureException(exception);
             yield error(500, ErrorCategory.SYSTEM, null, "Internal error");
           }
         };
