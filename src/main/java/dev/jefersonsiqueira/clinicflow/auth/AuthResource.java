@@ -21,12 +21,16 @@ import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
 /**
- * Two seeded demo accounts exist from V6/V11's migrations — {@code
+ * Four seeded demo accounts exist, one per {@link Role} — {@code
  * admin@clinicflow.dev}/{@code admin123} and {@code
- * doctor@clinicflow.dev}/{@code doctor123} — a public sandbox's "pre-seeded
- * demo accounts" now means logging in with these rather than writing without
- * logging in at all. Real credentials, real bcrypt, real JWTs; the passwords
- * are simply published, on purpose, the same as any other public demo login.
+ * doctor@clinicflow.dev}/{@code doctor123} from V6/V11, {@code
+ * recepcao@clinicflow.dev}/{@code recepcao123} from V16, and {@code
+ * paciente@clinicflow.dev}/{@code paciente123} from V15 (the one account
+ * linked to an actual patient row, via {@code User.patientId}) — a public
+ * sandbox's "pre-seeded demo accounts" now means logging in with these
+ * rather than writing without logging in at all. Real credentials, real
+ * bcrypt, real JWTs; the passwords are simply published, on purpose, the
+ * same as any other public demo login.
  */
 @Path("/v1/auth")
 @Tag(name = "Auth")
@@ -52,11 +56,21 @@ public class AuthResource {
                 @ExampleObject(
                     name = "doctor",
                     value = """
-                    {"email": "doctor@clinicflow.dev", "password": "doctor123"}""")
+                    {"email": "doctor@clinicflow.dev", "password": "doctor123"}"""),
+                @ExampleObject(
+                    name = "recepcao",
+                    value = """
+                    {"email": "recepcao@clinicflow.dev", "password": "recepcao123"}"""),
+                @ExampleObject(
+                    name = "paciente",
+                    value = """
+                    {"email": "paciente@clinicflow.dev", "password": "paciente123"}""")
               }))
   @APIResponse(
       responseCode = "200",
-      description = "A bearer token, valid for 8 hours. Send it as `Authorization: Bearer <token>`.",
+      description =
+          "A bearer access token, valid for 15 minutes, plus a refresh token valid for 7 "
+              + "days — see POST /v1/auth/refresh. Send the access token as `Authorization: Bearer <token>`.",
       content =
           @Content(
               examples =
@@ -66,8 +80,10 @@ public class AuthResource {
                           """
                           {
                             "token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
-                            "expiresInSeconds": 28800,
-                            "role": "ADMIN"
+                            "expiresInSeconds": 900,
+                            "role": "ADMIN",
+                            "refreshToken": "9nBYtTxfuKZWDYk_mhRszW_5fDisE-7DZoWwO8ieBZY",
+                            "refreshExpiresInSeconds": 604800
                           }""")))
   @APIResponse(
       responseCode = "401",

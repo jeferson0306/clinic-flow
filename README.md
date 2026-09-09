@@ -2,11 +2,13 @@
 
 A clinic management system — patients, doctors, procedures, exams,
 appointments, billing and calendar, one place — built to run a **public
-demo**: two seeded accounts, `admin`/`admin123` and `doctor`/`doctor123`, log
-in and try the real flow, not a screenshot of it. Reading is open to anyone;
-writing needs one of those two logins — see [Authentication](#authentication)
-for why that is a deliberate change from this project's earlier "anyone can
-write anonymously" shape, not an accident.
+demo**: four seeded accounts, one per role (`admin@clinicflow.dev`/
+`admin123`, `doctor@clinicflow.dev`/`doctor123`,
+`recepcao@clinicflow.dev`/`recepcao123`,
+`paciente@clinicflow.dev`/`paciente123`), log in and try the real flow, not
+a screenshot of it. Only the procedure catalogue (a price list) is readable
+without logging in — every other read and write requires one of those four
+logins, scoped by role — see [Authentication](#authentication).
 
 Java 25, Quarkus 3.39. Backend for a portfolio project; the frontend (GSAP,
 animejs, PT/EN/ES) is a separate app consuming this API.
@@ -249,37 +251,51 @@ spoofable. This is the same principled approach as brdoc's own
 
 ### Authentication
 
-Two roles, matching the two kinds of work this clinic actually has —
-`ADMIN` (registers patients and doctors, maintains the procedure catalogue)
-and `DOCTOR` (schedules and cancels appointments, requests and records
-exams) — not a general-purpose permission system built ahead of a role a
-third kind of user would need. Every `GET` stays open to anyone; every
-`POST` needs a valid JWT with the right role.
+Four roles, matching the four kinds of user this clinic actually has —
+`ADMIN` (registers patients and doctors, maintains the procedure catalogue),
+`DOCTOR` (schedules and cancels appointments, requests and records exams),
+`RECEPCAO` (front desk: registers/updates patients and books/cancels
+appointments — not doctors, procedures or exam results), and `PACIENTE` (a
+single patient, scoped to their own record only via `GET /v1/me/*` — see
+`MeResource`) — not a general-purpose permission system built ahead of a
+role a fifth kind of user would need. Only the procedure catalogue
+(`/v1/procedures` reads) stays open with no credentials; every other route,
+read or write, needs a valid JWT with the right role.
 
 ```bash
 curl -X POST https://clinic-flow.onrender.com/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email": "admin@clinicflow.dev", "password": "admin123"}'
-# {"token": "eyJ...", "expiresInSeconds": 28800, "role": "ADMIN"}
+# {"token": "eyJ...", "expiresInSeconds": 900, "role": "ADMIN",
+#  "refreshToken": "...", "refreshExpiresInSeconds": 604800}
 
 curl -X POST https://clinic-flow.onrender.com/v1/procedures \
   -H "Authorization: Bearer eyJ..." -H "Content-Type: application/json" \
   -d '{"name": "Consultation", "durationMinutes": 30, "priceCents": 15000}'
 ```
 
-Two seeded accounts (`admin@clinicflow.dev`/`admin123`,
-`doctor@clinicflow.dev`/`doctor123` — emails since V11, plain usernames
-before it) exist so a public demo login is possible from the first deploy —
-real bcrypt hashes, real JWTs, the passwords simply published, the same as
-any other public demo login. A signed-in user can change their own password
-via `PUT /v1/auth/password` (current + new password, the new one checked
-against `PasswordPolicy`: 10+ characters, upper, lower, digit, special) —
-the seeded passwords themselves stay as published; nothing forces them to
+The access token is short-lived (15 minutes) — `POST /v1/auth/refresh`
+trades a still-valid refresh token (7-day expiry, rotated on every use) for
+a new pair without asking for a password again; `POST /v1/auth/logout`
+revokes one outright. See `RefreshTokenService`'s own javadoc for why reuse
+of an already-rotated refresh token fails rather than minting endless
+tokens off one compromised value.
+
+Four seeded accounts (`admin@clinicflow.dev`/`admin123`,
+`doctor@clinicflow.dev`/`doctor123`, `recepcao@clinicflow.dev`/
+`recepcao123`, `paciente@clinicflow.dev`/`paciente123` — the last one
+linked to an actual patient row via `User.patientId`) exist so a public
+demo login is possible from the first deploy — real bcrypt hashes, real
+JWTs, the passwords simply published, the same as any other public demo
+login. A signed-in user can change their own password via `PUT
+/v1/auth/password` (current + new password, the new one checked against
+`PasswordPolicy`: 10+ characters, upper, lower, digit, special) — the
+seeded passwords themselves stay as published; nothing forces them to
 rotate. This is a deliberate change of shape from the project's earlier
-pitch ("anyone can write anonymously"): a public sandbox
-still needs *some* line between a visitor trying the product and a script
-hammering it, and "log in with a published demo account" is that line
-without needing a real identity from anyone.
+pitch ("anyone can write anonymously"): a public sandbox still needs *some*
+line between a visitor trying the product and a script hammering it, and
+"log in with a published demo account" is that line without needing a real
+identity from anyone.
 
 Standard asymmetric JWT — SmallRye JWT, RS256. The public key is committed
 (`jwt/publicKey.pem`); it is meant to be shared, the same as any signature
