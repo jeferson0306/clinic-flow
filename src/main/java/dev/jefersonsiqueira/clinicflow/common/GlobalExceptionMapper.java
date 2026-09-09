@@ -2,6 +2,7 @@ package dev.jefersonsiqueira.clinicflow.common;
 
 import dev.jefersonsiqueira.clinicflow.appointment.DoubleBookingException;
 import dev.jefersonsiqueira.clinicflow.auth.InvalidCredentialsException;
+import dev.jefersonsiqueira.clinicflow.auth.WeakPasswordException;
 import dev.jefersonsiqueira.clinicflow.doctor.DuplicateDoctorException;
 import dev.jefersonsiqueira.clinicflow.patient.DuplicatePatientException;
 import dev.jefersonsiqueira.clinicflow.ratelimit.ClientAddressResolver;
@@ -57,6 +58,7 @@ public class GlobalExceptionMapper implements ExceptionMapper<Exception> {
           case DoubleBookingException e -> error(409, ErrorCategory.CONFLICT, "startsAt", e.getMessage());
           case ResourceInUseException e -> error(409, ErrorCategory.CONFLICT, null, e.getMessage());
           case InvalidCredentialsException e -> error(401, ErrorCategory.UNAUTHORIZED, null, e.getMessage());
+          case WeakPasswordException e -> error(422, ErrorCategory.VALIDATION, "newPassword", e.getMessage());
           case RateLimitedException e ->
               Response.fromResponse(error(429, ErrorCategory.RATE_LIMITED, null, e.getMessage()))
                   .header("Retry-After", "1")

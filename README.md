@@ -259,7 +259,7 @@ third kind of user would need. Every `GET` stays open to anyone; every
 ```bash
 curl -X POST https://clinic-flow.onrender.com/v1/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username": "admin", "password": "admin123"}'
+  -d '{"email": "admin@clinicflow.dev", "password": "admin123"}'
 # {"token": "eyJ...", "expiresInSeconds": 28800, "role": "ADMIN"}
 
 curl -X POST https://clinic-flow.onrender.com/v1/procedures \
@@ -267,11 +267,16 @@ curl -X POST https://clinic-flow.onrender.com/v1/procedures \
   -d '{"name": "Consultation", "durationMinutes": 30, "priceCents": 15000}'
 ```
 
-Two seeded accounts (`admin`/`admin123`, `doctor`/`doctor123`, V6's
-migration) exist so a public demo login is possible from the first deploy —
+Two seeded accounts (`admin@clinicflow.dev`/`admin123`,
+`doctor@clinicflow.dev`/`doctor123` — emails since V11, plain usernames
+before it) exist so a public demo login is possible from the first deploy —
 real bcrypt hashes, real JWTs, the passwords simply published, the same as
-any other public demo login. This is a deliberate change of shape from the
-project's earlier pitch ("anyone can write anonymously"): a public sandbox
+any other public demo login. A signed-in user can change their own password
+via `PUT /v1/auth/password` (current + new password, the new one checked
+against `PasswordPolicy`: 10+ characters, upper, lower, digit, special) —
+the seeded passwords themselves stay as published; nothing forces them to
+rotate. This is a deliberate change of shape from the project's earlier
+pitch ("anyone can write anonymously"): a public sandbox
 still needs *some* line between a visitor trying the product and a script
 hammering it, and "log in with a published demo account" is that line
 without needing a real identity from anyone.

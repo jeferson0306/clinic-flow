@@ -9,8 +9,8 @@ import io.restassured.http.ContentType;
 import org.junit.jupiter.api.Test;
 
 /**
- * The real credential path — bcrypt against the demo accounts V6's
- * migration seeds, a real JWT issued and then actually accepted by a
+ * The real credential path — bcrypt against the demo accounts V6/V11's
+ * migrations seed, a real JWT issued and then actually accepted by a
  * protected endpoint. No {@code @TestSecurity} anywhere in this class: that
  * is for tests that only need *a* valid principal to exercise business
  * logic, and this class is the one place login itself is what is on trial.
@@ -23,7 +23,7 @@ class AuthResourceIT {
     given()
         .contentType(ContentType.JSON)
         .body("""
-            {"username": "admin", "password": "admin123"}
+            {"email": "admin@clinicflow.dev", "password": "admin123"}
             """)
         .when()
         .post("/v1/auth/login")
@@ -34,33 +34,64 @@ class AuthResourceIT {
   }
 
   @Test
-  void rejectsTheRightUsernameWithTheWrongPassword() {
+  void loginIsCaseInsensitiveOnEmail() {
     given()
         .contentType(ContentType.JSON)
         .body("""
-            {"username": "admin", "password": "not-the-password"}
+            {"email": "Admin@ClinicFlow.Dev", "password": "admin123"}
             """)
         .when()
         .post("/v1/auth/login")
         .then()
-        .statusCode(401)
-        .body("message", is("Invalid username or password"));
+        .statusCode(200)
+        .body("role", is("ADMIN"));
   }
 
   @Test
-  void rejectsAUsernameThatDoesNotExistWithTheSameMessage() {
-    // Same message, same status, as a wrong password for a real user —
-    // telling the two apart is an invitation to enumerate usernames.
+  void rejectsAnEmailShapedLikeSomethingOtherThanAnEmail() {
     given()
         .contentType(ContentType.JSON)
         .body("""
-            {"username": "no-such-user", "password": "anything"}
+            {"email": "not-an-email", "password": "admin123"}
+            """)
+        .when()
+        .post("/v1/auth/login")
+        .then()
+        // Bean Validation's own ConstraintViolationException, mapped to the
+        // app's usual 422 VALIDATION shape — same path every other
+        // @Valid-rejected field in this API takes, not a bespoke 400.
+        .statusCode(422)
+        .body("field", is("email"));
+  }
+
+  @Test
+  void rejectsTheRightEmailWithTheWrongPassword() {
+    given()
+        .contentType(ContentType.JSON)
+        .body("""
+            {"email": "admin@clinicflow.dev", "password": "not-the-password"}
             """)
         .when()
         .post("/v1/auth/login")
         .then()
         .statusCode(401)
-        .body("message", is("Invalid username or password"));
+        .body("message", is("Invalid email or password"));
+  }
+
+  @Test
+  void rejectsAnEmailThatDoesNotExistWithTheSameMessage() {
+    // Same message, same status, as a wrong password for a real user —
+    // telling the two apart is an invitation to enumerate accounts.
+    given()
+        .contentType(ContentType.JSON)
+        .body("""
+            {"email": "no-such-user@clinicflow.dev", "password": "anything"}
+            """)
+        .when()
+        .post("/v1/auth/login")
+        .then()
+        .statusCode(401)
+        .body("message", is("Invalid email or password"));
   }
 
   @Test
@@ -69,7 +100,7 @@ class AuthResourceIT {
         given()
             .contentType(ContentType.JSON)
             .body("""
-                {"username": "admin", "password": "admin123"}
+                {"email": "admin@clinicflow.dev", "password": "admin123"}
                 """)
             .post("/v1/auth/login")
             .jsonPath()
@@ -85,5 +116,71 @@ class AuthResourceIT {
         .post("/v1/procedures")
         .then()
         .statusCode(201);
+  }
+
+  @Test
+  void changesPasswordAndCanLogInWithTheNewOne() {
+    String token =
+        given()
+            .contentType(ContentType.JSON)
+            .body("""
+                {"email": "doctor@clinicflow.dev", "password": "doctor123"}
+                """)
+            .post("/v1/auth/login")
+            .jsonPath()
+            .getString("token");
+
+    given()
+        .header("Authorization", "Bearer " + token)
+        .contentType(ContentType.JSON)
+        .body("""
+            {"currentPassword": "doctor123", "newPassword": "NewPass!2026"}
+            """)
+        .when()
+        .put("/v1/auth/password")
+        .then()
+        .statusCode(204);
+
+    given()
+        .contentType(ContentType.JSON)
+        .body("""
+            {"email": "doctor@clinicflow.dev", "password": "NewPass!2026"}
+            """)
+        .when()
+        .post("/v1/auth/login")
+        .then()
+        .statusCode(200);
+
+    // No cleanup: this class's Postgres container is scoped to this class
+    // alone (Testcontainers, one per IT class) and no other test in this
+    // class logs in as doctor@clinicflow.dev afterward — mutating this
+    // account's password here does not touch the real seeded credentials,
+    // which live only in the actual deployed database, never in a test
+    // container.
+  }
+
+  @Test
+  void rejectsAWeakNewPassword() {
+    String token =
+        given()
+            .contentType(ContentType.JSON)
+            .body("""
+                {"email": "admin@clinicflow.dev", "password": "admin123"}
+                """)
+            .post("/v1/auth/login")
+            .jsonPath()
+            .getString("token");
+
+    given()
+        .header("Authorization", "Bearer " + token)
+        .contentType(ContentType.JSON)
+        .body("""
+            {"currentPassword": "admin123", "newPassword": "alllowercase"}
+            """)
+        .when()
+        .put("/v1/auth/password")
+        .then()
+        .statusCode(422)
+        .body("field", is("newPassword"));
   }
 }

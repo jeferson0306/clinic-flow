@@ -17,8 +17,9 @@ public class User extends PanacheEntityBase {
 
   @Id @GeneratedValue @UuidGenerator public UUID id;
 
+  /** The login identifier — a real email shape, validated at the request layer, not just a label. */
   @Column(nullable = false, unique = true)
-  public String username;
+  public String email;
 
   /** Bcrypt, via BcryptUtil — never a value this class or anything else compares by equality. */
   @Column(name = "password_hash", nullable = false)

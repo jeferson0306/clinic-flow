@@ -1,13 +1,17 @@
 package dev.jefersonsiqueira.clinicflow.auth;
 
 import io.smallrye.common.annotation.RunOnVirtualThread;
+import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
+import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.media.Content;
 import org.eclipse.microprofile.openapi.annotations.media.ExampleObject;
@@ -16,12 +20,12 @@ import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
 /**
- * Two seeded demo accounts exist from V6's migration — {@code admin}/{@code
- * admin123} and {@code doctor}/{@code doctor123} — a public sandbox's
- * "pre-seeded demo accounts" now means logging in with these rather than
- * writing without logging in at all. Real credentials, real bcrypt, real
- * JWTs; the passwords are simply published, on purpose, the same as any
- * other public demo login.
+ * Two seeded demo accounts exist from V6/V11's migrations — {@code
+ * admin@clinicflow.dev}/{@code admin123} and {@code
+ * doctor@clinicflow.dev}/{@code doctor123} — a public sandbox's "pre-seeded
+ * demo accounts" now means logging in with these rather than writing without
+ * logging in at all. Real credentials, real bcrypt, real JWTs; the passwords
+ * are simply published, on purpose, the same as any other public demo login.
  */
 @Path("/v1/auth")
 @Tag(name = "Auth")
@@ -31,18 +35,23 @@ import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 public class AuthResource {
 
   @Inject AuthService service;
+  @Inject JsonWebToken jwt;
 
   @POST
   @Path("/login")
-  @Operation(summary = "Exchange a username and password for a JWT")
+  @Operation(summary = "Exchange an email and password for a JWT")
   @RequestBody(
       content =
           @Content(
               examples = {
-                @ExampleObject(name = "admin", value = """
-                    {"username": "admin", "password": "admin123"}"""),
-                @ExampleObject(name = "doctor", value = """
-                    {"username": "doctor", "password": "doctor123"}""")
+                @ExampleObject(
+                    name = "admin",
+                    value = """
+                    {"email": "admin@clinicflow.dev", "password": "admin123"}"""),
+                @ExampleObject(
+                    name = "doctor",
+                    value = """
+                    {"email": "doctor@clinicflow.dev", "password": "doctor123"}""")
               }))
   @APIResponse(
       responseCode = "200",
@@ -61,15 +70,32 @@ public class AuthResource {
                           }""")))
   @APIResponse(
       responseCode = "401",
-      description = "Wrong username or password — deliberately indistinguishable from each other.",
+      description = "Wrong email or password — deliberately indistinguishable from each other.",
       content =
           @Content(
               examples =
                   @ExampleObject(
                       name = "401",
                       value = """
-                          {"field": null, "message": "Invalid username or password", "category": "UNAUTHORIZED"}""")))
+                          {"field": null, "message": "Invalid email or password", "category": "UNAUTHORIZED"}""")))
   public LoginResponse login(@Valid LoginRequest request) {
     return service.login(request);
+  }
+
+  @PUT
+  @Path("/password")
+  @RolesAllowed({"ADMIN", "DOCTOR"})
+  @Operation(summary = "Change the signed-in user's own password")
+  @APIResponse(responseCode = "204", description = "Password changed")
+  @APIResponse(responseCode = "401", description = "Current password was wrong")
+  @APIResponse(
+      responseCode = "422",
+      description = "New password does not meet the strength policy (see PasswordPolicy)")
+  public Response changePassword(@Valid ChangePasswordRequest request) {
+    // jwt.getName() returns the `upn` claim — the same user.email AuthService
+    // put there at login, never a value taken from the request body, so a
+    // caller cannot change anyone's password but their own.
+    service.changePassword(jwt.getName(), request);
+    return Response.noContent().build();
   }
 }

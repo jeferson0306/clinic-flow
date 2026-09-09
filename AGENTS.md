@@ -13,8 +13,9 @@ resource runs on a virtual thread (`@RunOnVirtualThread`); every request
 carries an OpenTelemetry trace id into its logs and back as `X-Trace-Id`,
 and is throttled per client address by a token bucket (`ratelimit/`) before
 it reaches routing. Every `POST` requires a JWT with the right role
-(`@RolesAllowed`) — two seeded accounts, `admin`/`admin123` and
-`doctor`/`doctor123`, exist for `POST /v1/auth/login` from the first deploy.
+(`@RolesAllowed`) — two seeded accounts, `admin@clinicflow.dev`/`admin123`
+and `doctor@clinicflow.dev`/`doctor123`, exist for `POST /v1/auth/login`
+from the first deploy.
 Never commit a real (non-`%dev`/`%test`) JWT private key — see
 `README.md`'s Authentication section for how production's is handled
 instead.
@@ -213,3 +214,12 @@ export PATH="$JAVA_HOME/bin:$PATH"
   lesson is to grep every `ApiError.field` value against the frontend's
   actual `name=` attributes when adding a new validated field, since
   nothing type-checks that connection across the two repos.
+- **`users.email` was `users.username` before V11.** Login is by email now
+  (`LoginRequest.email`, `@Email`-validated), and the two seeded demo
+  accounts were renamed to `admin@clinicflow.dev` /
+  `doctor@clinicflow.dev` — same passwords, same bcrypt hashes, only the
+  identifier changed. `PasswordPolicy` (10+ chars, upper, lower, digit,
+  special) only gates `PUT /v1/auth/password` — it does not retroactively
+  invalidate `admin123`/`doctor123`, which is why those still work for
+  login despite failing the policy themselves; tightening a policy does
+  not rotate passwords that predate it.
