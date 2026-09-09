@@ -38,7 +38,7 @@ public class PatientResource {
   @Inject PatientService service;
 
   @POST
-  @RolesAllowed("ADMIN")
+  @RolesAllowed({"ADMIN", "RECEPCAO"})
   @Operation(
       summary = "Register a patient",
       description =
@@ -135,7 +135,7 @@ public class PatientResource {
   // PHI — full name, CPF, birth date, phone, address — so both list and
   // findById require a real session, not just PermitAll-by-omission.
   @GET
-  @RolesAllowed({"ADMIN", "DOCTOR"})
+  @RolesAllowed({"ADMIN", "DOCTOR", "RECEPCAO"})
   @Operation(
       summary = "List every patient",
       description = "Newest first. No pagination — see PatientService.listAll's javadoc.")
@@ -173,7 +173,7 @@ public class PatientResource {
 
   @GET
   @Path("/{id}")
-  @RolesAllowed({"ADMIN", "DOCTOR"})
+  @RolesAllowed({"ADMIN", "DOCTOR", "RECEPCAO"})
   @Operation(summary = "Fetch a patient by id")
   @APIResponse(
       responseCode = "200",
@@ -227,7 +227,7 @@ public class PatientResource {
 
   @PUT
   @Path("/{id}")
-  @RolesAllowed("ADMIN")
+  @RolesAllowed({"ADMIN", "RECEPCAO"})
   @Operation(
       summary = "Update a patient",
       description =

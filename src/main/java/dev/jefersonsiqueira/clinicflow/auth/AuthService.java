@@ -66,7 +66,14 @@ public class AuthService {
   }
 
   private String issueAccessToken(User user) {
-    return Jwt.issuer(ISSUER).upn(user.email).groups(user.role.name()).expiresIn(TOKEN_LIFETIME).sign();
+    var builder = Jwt.issuer(ISSUER).upn(user.email).groups(user.role.name()).expiresIn(TOKEN_LIFETIME);
+    // Only a PACIENTE login carries this — it is what MeResource trusts to
+    // scope every one of its responses to this user's own patient record,
+    // never one taken from the request itself.
+    if (user.patientId != null) {
+      builder = builder.claim("patientId", user.patientId.toString());
+    }
+    return builder.sign();
   }
 
   @jakarta.transaction.Transactional

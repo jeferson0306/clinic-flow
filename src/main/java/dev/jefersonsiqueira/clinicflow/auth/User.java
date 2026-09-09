@@ -28,4 +28,8 @@ public class User extends PanacheEntityBase {
   @Enumerated(EnumType.STRING)
   @Column(nullable = false)
   public Role role;
+
+  /** Set only for role PACIENTE — which patient this login belongs to. Null for every staff role. */
+  @Column(name = "patient_id")
+  public UUID patientId;
 }

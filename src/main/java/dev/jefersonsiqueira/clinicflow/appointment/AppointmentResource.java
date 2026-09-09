@@ -40,7 +40,7 @@ public class AppointmentResource {
   // Content-Type, and JAX-RS rejects that as 415 against a class-wide
   // @Consumes it can never satisfy.
   @Consumes(MediaType.APPLICATION_JSON)
-  @RolesAllowed({"ADMIN", "DOCTOR"})
+  @RolesAllowed({"ADMIN", "DOCTOR", "RECEPCAO"})
   @Operation(
       summary = "Schedule an appointment",
       description =
@@ -104,7 +104,7 @@ public class AppointmentResource {
 
   @POST
   @Path("/{id}/cancel")
-  @RolesAllowed({"ADMIN", "DOCTOR"})
+  @RolesAllowed({"ADMIN", "DOCTOR", "RECEPCAO"})
   @Operation(
       summary = "Cancel an appointment, freeing the doctor's slot",
       description =
@@ -137,7 +137,7 @@ public class AppointmentResource {
   // schedule/cancel above, not the public-reads exception ProcedureResource gets.
   @GET
   @Path("/{id}")
-  @RolesAllowed({"ADMIN", "DOCTOR"})
+  @RolesAllowed({"ADMIN", "DOCTOR", "RECEPCAO"})
   @Operation(summary = "Fetch an appointment by id")
   @APIResponse(
       responseCode = "200",
@@ -164,7 +164,7 @@ public class AppointmentResource {
   }
 
   @GET
-  @RolesAllowed({"ADMIN", "DOCTOR"})
+  @RolesAllowed({"ADMIN", "DOCTOR", "RECEPCAO"})
   @Operation(summary = "List every appointment", description = "Newest first. No pagination yet.")
   @APIResponse(
       responseCode = "200",

@@ -107,4 +107,61 @@ class AuthorizationIT {
   void adminSystemHealthAllowsTheRightRole() {
     given().when().get("/v1/admin/recent-errors").then().statusCode(200);
   }
+
+  // RECEPCAO: front desk — patients and appointments, not doctors,
+  // procedures or exams. Same boundary ExamResource already draws between
+  // DOCTOR and ADMIN, just for a third role.
+  @Test
+  @TestSecurity(user = "front-desk", roles = "RECEPCAO")
+  void receptionCanReadPatientsAndAppointments() {
+    given().when().get("/v1/patients").then().statusCode(200);
+    given().when().get("/v1/appointments").then().statusCode(200);
+    given().when().get("/v1/doctors").then().statusCode(200);
+  }
+
+  @Test
+  @TestSecurity(user = "front-desk", roles = "RECEPCAO")
+  void receptionCannotWriteADoctorOrAnExam() {
+    given()
+        .contentType(ContentType.JSON)
+        .body("""
+            {"fullName":"Someone","cpf":"52998224725","email":"x@example.com","specialty":"Cardiology","licenseNumber":"1-SP"}
+            """)
+        .when()
+        .post("/v1/doctors")
+        .then()
+        .statusCode(403);
+
+    given()
+        .contentType(ContentType.JSON)
+        .body("""
+            {"patientId":"00000000-0000-0000-0000-000000000000",
+             "requestedByDoctorId":"00000000-0000-0000-0000-000000000000","type":"Blood count"}
+            """)
+        .when()
+        .post("/v1/exams")
+        .then()
+        .statusCode(403);
+  }
+
+  // PACIENTE: only ever /v1/me/* — every plain staff route rejects it, the
+  // same way a wrong staff role does.
+  @Test
+  @TestSecurity(user = "a-patient", roles = "PACIENTE")
+  void patientRoleCannotReachAnyStaffRoute() {
+    given().when().get("/v1/patients").then().statusCode(403);
+    given().when().get("/v1/appointments").then().statusCode(403);
+    given().when().get("/v1/exams").then().statusCode(403);
+    given().when().get("/v1/admin/recent-errors").then().statusCode(403);
+  }
+
+  @Test
+  @TestSecurity(user = "a-patient", roles = "PACIENTE")
+  void patientRoleCanBrowseTheDoctorDirectory() {
+    // The one staff-shaped read a patient is allowed: browsing who the
+    // clinic's doctors are — a name and specialty, not PHI — is what lets
+    // the portal show "Dr. X, Cardiology" on the patient's own appointments
+    // (see MeResource) without leaking anyone else's patient data.
+    given().when().get("/v1/doctors").then().statusCode(200);
+  }
 }

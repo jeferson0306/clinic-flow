@@ -1,6 +1,7 @@
 package dev.jefersonsiqueira.clinicflow.appointment;
 
 import io.quarkus.hibernate.orm.panache.PanacheRepositoryBase;
+import io.quarkus.panache.common.Sort;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.time.Instant;
 import java.util.List;
@@ -17,5 +18,10 @@ public class AppointmentRepository implements PanacheRepositoryBase<Appointment,
         Appointment.Status.SCHEDULED,
         to,
         from);
+  }
+
+  /** Every appointment for one patient, newest first — MeResource's own source, never a caller-supplied filter. */
+  public List<Appointment> findByPatientId(UUID patientId) {
+    return list("patientId", Sort.by("createdAt").descending(), patientId);
   }
 }

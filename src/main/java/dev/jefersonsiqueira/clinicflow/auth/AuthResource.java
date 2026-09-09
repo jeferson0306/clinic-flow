@@ -113,7 +113,7 @@ public class AuthResource {
 
   @PUT
   @Path("/password")
-  @RolesAllowed({"ADMIN", "DOCTOR"})
+  @RolesAllowed({"ADMIN", "DOCTOR", "RECEPCAO", "PACIENTE"})
   @Operation(summary = "Change the signed-in user's own password")
   @APIResponse(responseCode = "204", description = "Password changed")
   @APIResponse(responseCode = "401", description = "Current password was wrong")
