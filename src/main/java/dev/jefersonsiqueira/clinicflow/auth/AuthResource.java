@@ -1,6 +1,7 @@
 package dev.jefersonsiqueira.clinicflow.auth;
 
 import io.smallrye.common.annotation.RunOnVirtualThread;
+import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
@@ -80,6 +81,34 @@ public class AuthResource {
                           {"field": null, "message": "Invalid email or password", "category": "UNAUTHORIZED"}""")))
   public LoginResponse login(@Valid LoginRequest request) {
     return service.login(request);
+  }
+
+  @POST
+  @Path("/refresh")
+  @PermitAll
+  @Operation(
+      summary = "Trade a still-valid refresh token for a new access token",
+      description =
+          """
+          Rotates on every call: the refresh token sent here is revoked and a new one is \
+          returned alongside the new access token, the same shape login's own 200 has. \
+          A refresh token that is unknown, expired or already revoked (including a reused \
+          one — rotation means it was only ever valid once) is rejected the same way wrong \
+          credentials are.""")
+  @APIResponse(responseCode = "200", description = "A new access+refresh token pair")
+  @APIResponse(responseCode = "401", description = "The refresh token is invalid, expired or already used")
+  public LoginResponse refresh(@Valid RefreshRequest request) {
+    return service.refresh(request.refreshToken());
+  }
+
+  @POST
+  @Path("/logout")
+  @PermitAll
+  @Operation(summary = "Revoke a refresh token", description = "Ends that session — the access token already issued still works until it expires on its own.")
+  @APIResponse(responseCode = "204", description = "Revoked (or already was — logout is idempotent)")
+  public Response logout(@Valid RefreshRequest request) {
+    service.logout(request.refreshToken());
+    return Response.noContent().build();
   }
 
   @PUT

@@ -160,6 +160,132 @@ class AuthResourceIT {
   }
 
   @Test
+  void loginReturnsAUsableRefreshToken() {
+    given()
+        .contentType(ContentType.JSON)
+        .body("""
+            {"email": "admin@clinicflow.dev", "password": "admin123"}
+            """)
+        .when()
+        .post("/v1/auth/login")
+        .then()
+        .statusCode(200)
+        .body("refreshToken", notNullValue())
+        .body("refreshExpiresInSeconds", is(604800)); // 7 days
+  }
+
+  @Test
+  void refreshTradesAValidTokenForANewAccessAndRefreshPair() {
+    String refreshToken =
+        given()
+            .contentType(ContentType.JSON)
+            .body("""
+                {"email": "admin@clinicflow.dev", "password": "admin123"}
+                """)
+            .post("/v1/auth/login")
+            .jsonPath()
+            .getString("refreshToken");
+
+    given()
+        .contentType(ContentType.JSON)
+        .body("{\"refreshToken\": \"" + refreshToken + "\"}")
+        .when()
+        .post("/v1/auth/refresh")
+        .then()
+        .statusCode(200)
+        .body("token", notNullValue())
+        .body("role", is("ADMIN"))
+        .body("refreshToken", notNullValue());
+  }
+
+  @Test
+  void aRotatedRefreshTokenCannotBeReused() {
+    String refreshToken =
+        given()
+            .contentType(ContentType.JSON)
+            .body("""
+                {"email": "admin@clinicflow.dev", "password": "admin123"}
+                """)
+            .post("/v1/auth/login")
+            .jsonPath()
+            .getString("refreshToken");
+
+    given()
+        .contentType(ContentType.JSON)
+        .body("{\"refreshToken\": \"" + refreshToken + "\"}")
+        .when()
+        .post("/v1/auth/refresh")
+        .then()
+        .statusCode(200);
+
+    // Same token again — already revoked by the rotation above.
+    given()
+        .contentType(ContentType.JSON)
+        .body("{\"refreshToken\": \"" + refreshToken + "\"}")
+        .when()
+        .post("/v1/auth/refresh")
+        .then()
+        .statusCode(401);
+  }
+
+  @Test
+  void refreshRejectsAnUnknownToken() {
+    given()
+        .contentType(ContentType.JSON)
+        .body("{\"refreshToken\": \"not-a-real-token\"}")
+        .when()
+        .post("/v1/auth/refresh")
+        .then()
+        .statusCode(401);
+  }
+
+  @Test
+  void logoutRevokesTheRefreshTokenSoItCanNoLongerBeUsed() {
+    String refreshToken =
+        given()
+            .contentType(ContentType.JSON)
+            .body("""
+                {"email": "admin@clinicflow.dev", "password": "admin123"}
+                """)
+            .post("/v1/auth/login")
+            .jsonPath()
+            .getString("refreshToken");
+
+    given()
+        .contentType(ContentType.JSON)
+        .body("{\"refreshToken\": \"" + refreshToken + "\"}")
+        .when()
+        .post("/v1/auth/logout")
+        .then()
+        .statusCode(204);
+
+    given()
+        .contentType(ContentType.JSON)
+        .body("{\"refreshToken\": \"" + refreshToken + "\"}")
+        .when()
+        .post("/v1/auth/refresh")
+        .then()
+        .statusCode(401);
+  }
+
+  @Test
+  void logoutIsIdempotent() {
+    String refreshToken =
+        given()
+            .contentType(ContentType.JSON)
+            .body("""
+                {"email": "admin@clinicflow.dev", "password": "admin123"}
+                """)
+            .post("/v1/auth/login")
+            .jsonPath()
+            .getString("refreshToken");
+
+    String body = "{\"refreshToken\": \"" + refreshToken + "\"}";
+    given().contentType(ContentType.JSON).body(body).when().post("/v1/auth/logout").then().statusCode(204);
+    given().contentType(ContentType.JSON).body(body).when().post("/v1/auth/logout").then().statusCode(204);
+  }
+
+  @Test
   void rejectsAWeakNewPassword() {
     String token =
         given()
