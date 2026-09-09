@@ -57,7 +57,7 @@ class PatientResourceIT {
             true, digitsOnly.apply(inv.getArgument(0)), "Valid postcode format", null)));
     when(viaCep.lookup(anyString()))
         .thenReturn(
-            new ViaCepResponse("01310200", "Avenida Paulista", "Bela Vista", "São Paulo", "SP", false));
+            new ViaCepResponse("01310200", "Avenida Paulista", "Bela Vista", "São Paulo", "SP", "3550308", false));
   }
 
   @Test
@@ -136,6 +136,57 @@ class PatientResourceIT {
   }
 
   @Test
+  void updatingAMinorWithoutResendingTheGuardianCpfKeepsTheOneOnFile() {
+    String id =
+        given()
+            .contentType(ContentType.JSON)
+            .body(
+                """
+                {"fullName":"Joaozinho Silva","cpf":"135.792.468-28","email":"joao3@example.com",
+                 "postcode":"01310-200","birthDate":"2015-01-01",
+                 "guardianName":"Maria Silva","guardianCpf":"529.982.247-25","guardianRelationship":"MAE"}
+                """)
+            .when()
+            .post("/v1/patients")
+            .then()
+            .statusCode(201)
+            .extract()
+            .path("id");
+
+    // No guardianCpf in this body at all — PatientResponse only ever
+    // returns it masked, so a real client can't resend the value unchanged.
+    given()
+        .contentType(ContentType.JSON)
+        .body(
+            """
+            {"fullName":"Joaozinho Silva","email":"joao3b@example.com","postcode":"01310-200",
+             "birthDate":"2015-01-01","guardianName":"Maria Silva","guardianRelationship":"MAE"}
+            """)
+        .when()
+        .put("/v1/patients/" + id)
+        .then()
+        .statusCode(200)
+        .body("maskedGuardianCpf", is("*********25"));
+  }
+
+  @Test
+  void rejectsAnInvalidEnumValueAsAField422NotARawFrameworkError() {
+    given()
+        .contentType(ContentType.JSON)
+        .body(
+            """
+            {"fullName":"Bad Enum","cpf":"987.654.321-00","email":"badenum@example.com",
+             "postcode":"01310-200","sex":"NOT_A_REAL_VALUE"}
+            """)
+        .when()
+        .post("/v1/patients")
+        .then()
+        .statusCode(422)
+        .body("field", is("sex"))
+        .body("category", is("VALIDATION"));
+  }
+
+  @Test
   void deletesAPatientWithNoRecordsAgainstThem() {
     String id =
         given()
@@ -153,6 +204,56 @@ class PatientResourceIT {
 
     given().when().delete("/v1/patients/" + id).then().statusCode(204);
     given().when().get("/v1/patients/" + id).then().statusCode(404);
+  }
+
+  @Test
+  void registrationCarriesTheIbgeCodeViaCepReturns() {
+    given()
+        .contentType(ContentType.JSON)
+        .body(
+            """
+            {"fullName":"Ana Souza","cpf":"390.533.447-05","email":"ana2@example.com","postcode":"01310-200"}
+            """)
+        .when()
+        .post("/v1/patients")
+        .then()
+        .statusCode(201)
+        .body("address.ibgeCode", is("3550308"));
+  }
+
+  @Test
+  void rejectsAMinorPatientWithNoGuardianOnRecord() {
+    given()
+        .contentType(ContentType.JSON)
+        .body(
+            """
+            {"fullName":"Joaozinho Silva","cpf":"398.532.130-05","email":"joao@example.com",
+             "postcode":"01310-200","birthDate":"2015-01-01"}
+            """)
+        .when()
+        .post("/v1/patients")
+        .then()
+        .statusCode(422)
+        .body("field", is("guardianName"));
+  }
+
+  @Test
+  void registersAMinorPatientWithAGuardianOnRecord() {
+    given()
+        .contentType(ContentType.JSON)
+        .body(
+            """
+            {"fullName":"Joaozinho Silva","cpf":"398.532.130-05","email":"joao2@example.com",
+             "postcode":"01310-200","birthDate":"2015-01-01",
+             "guardianName":"Maria Silva","guardianCpf":"529.982.247-25","guardianRelationship":"MAE"}
+            """)
+        .when()
+        .post("/v1/patients")
+        .then()
+        .statusCode(201)
+        .body("guardianName", is("Maria Silva"))
+        .body("guardianRelationship", is("MAE"))
+        .body("maskedGuardianCpf", is("*********25"));
   }
 
   @Test

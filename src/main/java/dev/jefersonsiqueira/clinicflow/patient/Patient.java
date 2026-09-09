@@ -4,6 +4,8 @@ import dev.jefersonsiqueira.clinicflow.address.Address;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
@@ -44,4 +46,48 @@ public class Patient extends PanacheEntityBase {
 
   @Column(name = "created_at", nullable = false)
   public Instant createdAt;
+
+  // Everything below is optional clinical/legal-guardian data, added
+  // alongside the original registration fields — see
+  // V12__expand_patient_clinical_data.sql for why every column is nullable.
+
+  @Column(name = "social_name")
+  public String socialName;
+
+  @Column(name = "mother_name")
+  public String motherName;
+
+  @Enumerated(EnumType.STRING)
+  @Column(name = "sex")
+  public Sex sex;
+
+  @Enumerated(EnumType.STRING)
+  @Column(name = "blood_type")
+  public BloodType bloodType;
+
+  @Column(name = "allergies")
+  public String allergies;
+
+  @Column(name = "continuous_medications")
+  public String continuousMedications;
+
+  @Column(name = "pre_existing_conditions")
+  public String preExistingConditions;
+
+  /** Shown as a visual warning on the patient's record in the frontend when non-null. */
+  @Column(name = "clinical_alert")
+  public String clinicalAlert;
+
+  @Column(name = "guardian_name")
+  public String guardianName;
+
+  @Column(name = "guardian_cpf", length = 11)
+  public String guardianCpf;
+
+  @Enumerated(EnumType.STRING)
+  @Column(name = "guardian_relationship")
+  public GuardianRelationship guardianRelationship;
+
+  @Column(name = "guardian_phone")
+  public String guardianPhone;
 }

@@ -17,4 +17,5 @@ public record ViaCepResponse(
     @JsonProperty("bairro") String district,
     @JsonProperty("localidade") String city,
     @JsonProperty("uf") String state,
+    @JsonProperty("ibge") String ibgeCode,
     @JsonProperty("erro") boolean notFound) {}

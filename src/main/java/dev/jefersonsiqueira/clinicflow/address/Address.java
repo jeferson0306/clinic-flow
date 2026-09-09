@@ -27,6 +27,10 @@ public class Address {
   @Column(name = "state", length = 2)
   public String state;
 
+  /** The IBGE municipality code — ViaCEP already returns it, this just stops discarding it. */
+  @Column(name = "ibge_code", length = 7)
+  public String ibgeCode;
+
   public static Address unresolved(String postcode) {
     Address address = new Address();
     address.postcode = postcode;

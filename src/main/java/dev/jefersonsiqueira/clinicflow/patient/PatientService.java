@@ -47,9 +47,51 @@ public class PatientService {
     patient.birthDate = request.birthDate();
     patient.address = address;
     patient.createdAt = Instant.now();
+    applyClinicalFields(patient, request.socialName(), request.motherName(), request.sex(), request.bloodType(),
+        request.allergies(), request.continuousMedications(), request.preExistingConditions(),
+        request.clinicalAlert(), request.guardianName(), request.guardianCpf(), request.guardianRelationship(),
+        request.guardianPhone());
 
     patients.persist(patient);
     return patient;
+  }
+
+  /**
+   * Shared by register and update — the two request records carry the same
+   * clinical/guardian fields, and this is the one place that trims blanks to
+   * null and normalizes the guardian CPF the same way the patient's own is.
+   */
+  private void applyClinicalFields(
+      Patient patient,
+      String socialName,
+      String motherName,
+      Sex sex,
+      BloodType bloodType,
+      String allergies,
+      String continuousMedications,
+      String preExistingConditions,
+      String clinicalAlert,
+      String guardianName,
+      String guardianCpf,
+      GuardianRelationship guardianRelationship,
+      String guardianPhone) {
+    patient.socialName = blankToNull(socialName);
+    patient.motherName = blankToNull(motherName);
+    patient.sex = sex;
+    patient.bloodType = bloodType;
+    patient.allergies = blankToNull(allergies);
+    patient.continuousMedications = blankToNull(continuousMedications);
+    patient.preExistingConditions = blankToNull(preExistingConditions);
+    patient.clinicalAlert = blankToNull(clinicalAlert);
+    patient.guardianName = blankToNull(guardianName);
+    patient.guardianCpf =
+        guardianCpf == null || guardianCpf.isBlank() ? null : documentValidator.cpf(guardianCpf, "guardianCpf");
+    patient.guardianRelationship = guardianRelationship;
+    patient.guardianPhone = blankToNull(guardianPhone);
+  }
+
+  private static String blankToNull(String value) {
+    return value == null || value.isBlank() ? null : value.trim();
   }
 
   public Patient findById(UUID id) {
@@ -75,11 +117,24 @@ public class PatientService {
         : documentValidator.telephone(request.phone());
     Address address = addressLookup.resolve(request.postcode());
 
+    // guardianCpf comes back masked in every response (PatientResponse), so
+    // a client resubmitting a form it never touched can't round-trip it
+    // unchanged — a blank guardianCpf here means "leave it as it was," not
+    // "clear it," unlike every other field on this request.
+    String existingGuardianCpf = patient.guardianCpf;
+
     patient.fullName = request.fullName().trim();
     patient.email = email;
     patient.phone = phone;
     patient.birthDate = request.birthDate();
     patient.address = address;
+    applyClinicalFields(patient, request.socialName(), request.motherName(), request.sex(), request.bloodType(),
+        request.allergies(), request.continuousMedications(), request.preExistingConditions(),
+        request.clinicalAlert(), request.guardianName(), request.guardianCpf(), request.guardianRelationship(),
+        request.guardianPhone());
+    if (request.guardianCpf() == null || request.guardianCpf().isBlank()) {
+      patient.guardianCpf = existingGuardianCpf;
+    }
     return patient;
   }
 

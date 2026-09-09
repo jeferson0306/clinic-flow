@@ -39,6 +39,7 @@ public class AddressLookupService {
       address.district = found.district();
       address.city = found.city();
       address.state = found.state();
+      address.ibgeCode = found.ibgeCode();
       return address;
     } catch (RuntimeException e) {
       Log.warnf("ViaCEP lookup failed for a postcode, continuing without it: %s", e.getMessage());

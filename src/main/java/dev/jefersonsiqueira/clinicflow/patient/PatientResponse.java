@@ -21,7 +21,19 @@ public record PatientResponse(
     String phone,
     LocalDate birthDate,
     Address address,
-    Instant createdAt) {
+    Instant createdAt,
+    String socialName,
+    String motherName,
+    Sex sex,
+    BloodType bloodType,
+    String allergies,
+    String continuousMedications,
+    String preExistingConditions,
+    String clinicalAlert,
+    String guardianName,
+    String maskedGuardianCpf,
+    GuardianRelationship guardianRelationship,
+    String guardianPhone) {
 
   public static PatientResponse from(Patient patient) {
     return new PatientResponse(
@@ -32,6 +44,18 @@ public record PatientResponse(
         patient.phone,
         patient.birthDate,
         patient.address,
-        patient.createdAt);
+        patient.createdAt,
+        patient.socialName,
+        patient.motherName,
+        patient.sex,
+        patient.bloodType,
+        patient.allergies,
+        patient.continuousMedications,
+        patient.preExistingConditions,
+        patient.clinicalAlert,
+        patient.guardianName,
+        patient.guardianCpf == null ? null : DocumentMasking.maskCpf(patient.guardianCpf),
+        patient.guardianRelationship,
+        patient.guardianPhone);
   }
 }

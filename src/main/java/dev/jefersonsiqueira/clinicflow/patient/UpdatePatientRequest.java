@@ -14,9 +14,23 @@ import java.time.LocalDate;
  * update, the same way {@link DoctorService} and {@link
  * dev.jefersonsiqueira.clinicflow.procedure.ProcedureService} treat theirs.
  */
+@RequiresGuardianIfMinor(requireCpf = false)
 public record UpdatePatientRequest(
     @NotBlank @Pattern(regexp = NamePattern.REGEXP, message = NamePattern.MESSAGE) String fullName,
     @NotBlank String email,
     String phone,
     @Past LocalDate birthDate,
-    @NotBlank String postcode) {}
+    @NotBlank String postcode,
+    String socialName,
+    String motherName,
+    Sex sex,
+    BloodType bloodType,
+    String allergies,
+    String continuousMedications,
+    String preExistingConditions,
+    String clinicalAlert,
+    String guardianName,
+    String guardianCpf,
+    GuardianRelationship guardianRelationship,
+    String guardianPhone)
+    implements RequiresGuardianIfMinor.Subject {}

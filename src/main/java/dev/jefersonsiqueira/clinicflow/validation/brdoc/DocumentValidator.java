@@ -25,6 +25,15 @@ public class DocumentValidator {
     return require("cpf", brdoc.validateCpf(rawValue));
   }
 
+  // Same call, a caller-chosen field name — for a CPF that isn't *the*
+  // record's own cpf() field, like a patient's guardianCpf, so a rejection
+  // is reported against the field that actually exists on the request
+  // instead of always "cpf" (the exact bug telephone()'s own comment above
+  // describes, for the same reason).
+  public String cpf(String rawValue, String fieldName) {
+    return require(fieldName, brdoc.validateCpf(rawValue));
+  }
+
   public String email(String rawValue) {
     return require("email", brdoc.validateEmail(rawValue));
   }
