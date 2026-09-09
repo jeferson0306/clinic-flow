@@ -131,7 +131,11 @@ public class PatientResource {
         .build();
   }
 
+  // Unlike ProcedureResource's reads (a public price list), these carry real
+  // PHI — full name, CPF, birth date, phone, address — so both list and
+  // findById require a real session, not just PermitAll-by-omission.
   @GET
+  @RolesAllowed({"ADMIN", "DOCTOR"})
   @Operation(
       summary = "List every patient",
       description = "Newest first. No pagination — see PatientService.listAll's javadoc.")
@@ -169,6 +173,7 @@ public class PatientResource {
 
   @GET
   @Path("/{id}")
+  @RolesAllowed({"ADMIN", "DOCTOR"})
   @Operation(summary = "Fetch a patient by id")
   @APIResponse(
       responseCode = "200",

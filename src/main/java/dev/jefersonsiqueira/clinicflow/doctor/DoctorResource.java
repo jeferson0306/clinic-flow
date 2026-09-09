@@ -112,7 +112,10 @@ public class DoctorResource {
         .build();
   }
 
+  // Carries CPF (masked) and personal contact details — same PHI reasoning
+  // as PatientResource, unlike ProcedureResource's public price list.
   @GET
+  @RolesAllowed({"ADMIN", "DOCTOR"})
   @Operation(summary = "List every doctor", description = "Newest first. No pagination yet.")
   @APIResponse(
       responseCode = "200",
@@ -141,6 +144,7 @@ public class DoctorResource {
 
   @GET
   @Path("/{id}")
+  @RolesAllowed({"ADMIN", "DOCTOR"})
   @Operation(summary = "Fetch a doctor by id")
   @APIResponse(
       responseCode = "200",

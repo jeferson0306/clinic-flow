@@ -55,6 +55,39 @@ class AuthorizationIT {
     given().when().get("/v1/procedures").then().statusCode(200);
   }
 
+  // Patients, doctors, appointments and exams carry real PHI, unlike the
+  // procedures price list above — their reads must require a real session,
+  // not just fall through PermitAll-by-omission the way they used to.
+  @Test
+  void patientReadsRejectNoCredentials() {
+    given().when().get("/v1/patients").then().statusCode(401);
+    given().when().get("/v1/patients/00000000-0000-0000-0000-000000000000").then().statusCode(401);
+  }
+
+  @Test
+  void doctorReadsRejectNoCredentials() {
+    given().when().get("/v1/doctors").then().statusCode(401);
+    given().when().get("/v1/doctors/00000000-0000-0000-0000-000000000000").then().statusCode(401);
+  }
+
+  @Test
+  void appointmentReadsRejectNoCredentials() {
+    given().when().get("/v1/appointments").then().statusCode(401);
+    given().when().get("/v1/appointments/00000000-0000-0000-0000-000000000000").then().statusCode(401);
+  }
+
+  @Test
+  void examReadsRejectNoCredentials() {
+    given().when().get("/v1/exams").then().statusCode(401);
+    given().when().get("/v1/exams/00000000-0000-0000-0000-000000000000").then().statusCode(401);
+  }
+
+  @Test
+  @TestSecurity(user = "a-doctor", roles = "DOCTOR")
+  void patientReadsAllowARealDoctorSession() {
+    given().when().get("/v1/patients").then().statusCode(200);
+  }
+
   @Test
   void adminSystemHealthRejectsNoCredentials() {
     given().when().get("/v1/admin/recent-errors").then().statusCode(401);

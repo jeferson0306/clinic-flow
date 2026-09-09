@@ -2,7 +2,6 @@ package dev.jefersonsiqueira.clinicflow.appointment;
 
 import io.smallrye.common.annotation.RunOnVirtualThread;
 import jakarta.annotation.security.RolesAllowed;
-import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
@@ -134,8 +133,11 @@ public class AppointmentResource {
     return AppointmentResponse.from(service.cancel(id));
   }
 
+  // Links a patient to a doctor at a specific time — same access boundary as
+  // schedule/cancel above, not the public-reads exception ProcedureResource gets.
   @GET
   @Path("/{id}")
+  @RolesAllowed({"ADMIN", "DOCTOR"})
   @Operation(summary = "Fetch an appointment by id")
   @APIResponse(
       responseCode = "200",
@@ -162,6 +164,7 @@ public class AppointmentResource {
   }
 
   @GET
+  @RolesAllowed({"ADMIN", "DOCTOR"})
   @Operation(summary = "List every appointment", description = "Newest first. No pagination yet.")
   @APIResponse(
       responseCode = "200",

@@ -120,8 +120,12 @@ public class ExamResource {
     return ExamResponse.from(service.recordResult(id, request));
   }
 
+  // Carries exam results — real PHI, same reasoning as patient/doctor reads.
+  // Both roles can read (ADMIN views the exams page too), even though only
+  // DOCTOR can request/record — that asymmetry is deliberate, see above.
   @GET
   @Path("/{id}")
+  @RolesAllowed({"ADMIN", "DOCTOR"})
   @Operation(summary = "Fetch an exam by id")
   @APIResponse(
       responseCode = "200",
@@ -148,6 +152,7 @@ public class ExamResource {
   }
 
   @GET
+  @RolesAllowed({"ADMIN", "DOCTOR"})
   @Operation(summary = "List every exam", description = "Newest first (by requestedAt). No pagination yet.")
   @APIResponse(
       responseCode = "200",
