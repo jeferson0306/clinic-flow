@@ -34,9 +34,7 @@ public class PatientService {
     }
 
     String email = documentValidator.email(request.email());
-    String phone = request.phone() == null || request.phone().isBlank()
-        ? null
-        : documentValidator.telephone(request.phone());
+    String phone = documentValidator.telephone(request.phone());
     Address address = addressLookup.resolve(request.postcode());
     address.houseNumber = request.houseNumber().trim();
     address.complement = blankToNull(request.complement());
@@ -114,9 +112,7 @@ public class PatientService {
   public Patient update(UUID id, UpdatePatientRequest request) {
     Patient patient = findById(id);
     String email = documentValidator.email(request.email());
-    String phone = request.phone() == null || request.phone().isBlank()
-        ? null
-        : documentValidator.telephone(request.phone());
+    String phone = documentValidator.telephone(request.phone());
     Address address = addressLookup.resolve(request.postcode());
     address.houseNumber = request.houseNumber().trim();
     address.complement = blankToNull(request.complement());

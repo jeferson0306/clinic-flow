@@ -48,6 +48,10 @@ class AuditLogFilterIT {
         .thenAnswer(inv -> Response.ok(new BrdocValidationResponse(
                 true, ((String) inv.getArgument(0)).replaceAll("\\D", ""), "Valid postcode format", null))
             .build());
+    when(brdoc.validateTelephone(anyString()))
+        .thenAnswer(inv -> Response.ok(new BrdocValidationResponse(
+                true, ((String) inv.getArgument(0)).replaceAll("\\D", ""), "Valid phone", null))
+            .build());
     when(viaCep.lookup(anyString()))
         .thenReturn(new ViaCepResponse("01310200", "Avenida Paulista", "Bela Vista", "São Paulo", "SP", "3550308", false));
   }
@@ -74,7 +78,7 @@ class AuditLogFilterIT {
         .contentType(ContentType.JSON)
         .body(
             """
-            {"fullName":"Auditada Silva","cpf":"123.456.789-09","email":"auditada@example.com","postcode":"01310-200","houseNumber":"123"}
+            {"fullName":"Auditada Silva","cpf":"123.456.789-09","email":"auditada@example.com","phone":"11987654321","birthDate":"1990-05-10","postcode":"01310-200","houseNumber":"123"}
             """)
         .when()
         .post("/v1/patients")

@@ -43,11 +43,14 @@ public class PatientResource {
       summary = "Register a patient",
       description =
           """
-          CPF, email and, if given, phone are validated and normalized through brdoc \
+          CPF, email and phone are validated and normalized through brdoc \
           before anything is stored — the CPF in the response is the normalized value, \
           masked. The postcode is resolved to a street, district, city and state via \
           ViaCEP; that lookup is a courtesy and never blocks registration if ViaCEP is \
-          slow or down (see AddressLookupService).""")
+          slow or down (see AddressLookupService). phone and birthDate are required: \
+          a clinic cannot reschedule an appointment or deliver an exam result without a \
+          working phone number, and birthDate is what lets the guardian-for-a-minor \
+          check run at all (see RequiresGuardianIfMinor).""")
   @RequestBody(
       content =
           @Content(
@@ -63,18 +66,26 @@ public class PatientResource {
                           "email": "ana@example.com",
                           "phone": "+55 61 99194-6758",
                           "birthDate": "1990-05-10",
-                          "postcode": "01310-200"
+                          "postcode": "01310-200",
+                          "houseNumber": "123"
                         }"""),
                 @ExampleObject(
-                    name = "minimal",
-                    summary = "Only what is required — phone and birth date are optional",
+                    name = "minor",
+                    summary = "Under 18 — guardian name, CPF, relationship and phone all required",
                     value =
                         """
                         {
-                          "fullName": "Bruno Lima",
+                          "fullName": "Joaozinho Silva",
                           "cpf": "111.444.777-35",
-                          "email": "bruno@example.com",
-                          "postcode": "70040-010"
+                          "email": "guardian-managed@example.com",
+                          "phone": "+55 61 99194-6758",
+                          "birthDate": "2015-01-01",
+                          "postcode": "70040-010",
+                          "houseNumber": "45",
+                          "guardianName": "Bruno Lima",
+                          "guardianCpf": "701.919.410-05",
+                          "guardianRelationship": "PAI",
+                          "guardianPhone": "+55 61 99194-1234"
                         }""")
               }))
   @APIResponse(

@@ -55,6 +55,12 @@ public @interface RequiresGuardianIfMinor {
     // Object, not GuardianRelationship: this interface is shape-only and
     // doesn't need to know the enum type, it only ever checks for null.
     Object guardianRelationship();
+
+    // Required for a minor same as the other three: a guardian this system
+    // can't reach by phone isn't meaningfully "on file" for anything the
+    // phone would actually be needed for — rescheduling, an exam result,
+    // an emergency.
+    String guardianPhone();
   }
 
   class Validator implements ConstraintValidator<RequiresGuardianIfMinor, Subject> {
@@ -78,7 +84,10 @@ public @interface RequiresGuardianIfMinor {
         return true;
       }
       boolean cpfOk = !requireCpf || hasText(subject.guardianCpf());
-      if (hasText(subject.guardianName()) && cpfOk && subject.guardianRelationship() != null) {
+      if (hasText(subject.guardianName())
+          && cpfOk
+          && subject.guardianRelationship() != null
+          && hasText(subject.guardianPhone())) {
         return true;
       }
 
@@ -89,7 +98,7 @@ public @interface RequiresGuardianIfMinor {
       context.disableDefaultConstraintViolation();
       context
           .buildConstraintViolationWithTemplate(
-              "guardian name, CPF and relationship are required for a patient under 18")
+              "guardian name, CPF, relationship and phone are required for a patient under 18")
           .addPropertyNode("guardianName")
           .addConstraintViolation();
       return false;

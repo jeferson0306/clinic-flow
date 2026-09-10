@@ -2,6 +2,7 @@ package dev.jefersonsiqueira.clinicflow.patient;
 
 import dev.jefersonsiqueira.clinicflow.common.validation.NamePattern;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Past;
 import jakarta.validation.constraints.Pattern;
 import java.time.LocalDate;
@@ -18,8 +19,8 @@ import java.time.LocalDate;
 public record UpdatePatientRequest(
     @NotBlank @Pattern(regexp = NamePattern.REGEXP, message = NamePattern.MESSAGE) String fullName,
     @NotBlank String email,
-    String phone,
-    @Past LocalDate birthDate,
+    @NotBlank String phone,
+    @NotNull @Past LocalDate birthDate,
     @NotBlank String postcode,
     @NotBlank String houseNumber,
     String complement,

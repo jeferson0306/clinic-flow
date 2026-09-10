@@ -48,13 +48,16 @@ class ExamResourceIT {
     when(brdoc.validateCep(anyString()))
         .thenAnswer(inv -> Response.ok(new BrdocValidationResponse(
             true, ((String) inv.getArgument(0)).replaceAll("\\D", ""), "Valid postcode format", null)).build());
+    when(brdoc.validateTelephone(anyString()))
+        .thenAnswer(inv -> Response.ok(new BrdocValidationResponse(
+            true, ((String) inv.getArgument(0)).replaceAll("\\D", ""), "Valid phone", null)).build());
 
     patientId =
         given()
             .contentType(ContentType.JSON)
             .body(
                 """
-                {"fullName":"Ana Souza","cpf":"%s","email":"ana@example.com","postcode":"01310-200","houseNumber":"123"}
+                {"fullName":"Ana Souza","cpf":"%s","email":"ana@example.com","phone":"11987654321","birthDate":"1990-05-10","postcode":"01310-200","houseNumber":"123"}
                 """.formatted(unique("")))
             .post("/v1/patients")
             .jsonPath()
