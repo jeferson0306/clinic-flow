@@ -22,15 +22,19 @@ import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
 /**
  * Four seeded demo accounts exist, one per {@link Role} — {@code
- * admin@clinicflow.dev}/{@code admin123} and {@code
- * doctor@clinicflow.dev}/{@code doctor123} from V6/V11, {@code
- * recepcao@clinicflow.dev}/{@code recepcao123} from V16, and {@code
- * paciente@clinicflow.dev}/{@code paciente123} from V15 (the one account
+ * admin@clinicflow.dev}/{@code Admin@Flow2026!} and {@code
+ * doctor@clinicflow.dev}/{@code Doctor@Flow2026!} from V6/V11, {@code
+ * recepcao@clinicflow.dev}/{@code Recepcao@Flow2026!} from V16, and {@code
+ * paciente@clinicflow.dev}/{@code Paciente@Flow2026!} from V15 (the one account
  * linked to an actual patient row, via {@code User.patientId}) — a public
  * sandbox's "pre-seeded demo accounts" now means logging in with these
  * rather than writing without logging in at all. Real credentials, real
  * bcrypt, real JWTs; the passwords are simply published, on purpose, the
- * same as any other public demo login.
+ * same as any other public demo login. Bumped to their current values by
+ * V19: {@link PasswordPolicy}'s minimum length only ever applies to a
+ * password someone is actively setting, never to one already on file, so
+ * tightening that policy did nothing to these four hashes on its own —
+ * V19 is the one place that actually rewrote them to match.
  */
 @Path("/v1/auth")
 @Tag(name = "Auth")
@@ -52,19 +56,19 @@ public class AuthResource {
                 @ExampleObject(
                     name = "admin",
                     value = """
-                    {"email": "admin@clinicflow.dev", "password": "admin123"}"""),
+                    {"email": "admin@clinicflow.dev", "password": "Admin@Flow2026!"}"""),
                 @ExampleObject(
                     name = "doctor",
                     value = """
-                    {"email": "doctor@clinicflow.dev", "password": "doctor123"}"""),
+                    {"email": "doctor@clinicflow.dev", "password": "Doctor@Flow2026!"}"""),
                 @ExampleObject(
                     name = "recepcao",
                     value = """
-                    {"email": "recepcao@clinicflow.dev", "password": "recepcao123"}"""),
+                    {"email": "recepcao@clinicflow.dev", "password": "Recepcao@Flow2026!"}"""),
                 @ExampleObject(
                     name = "paciente",
                     value = """
-                    {"email": "paciente@clinicflow.dev", "password": "paciente123"}""")
+                    {"email": "paciente@clinicflow.dev", "password": "Paciente@Flow2026!"}""")
               }))
   @APIResponse(
       responseCode = "200",

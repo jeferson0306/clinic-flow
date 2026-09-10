@@ -3,9 +3,9 @@
 A clinic management system — patients, doctors, procedures, exams,
 appointments, billing and calendar, one place — built to run a **public
 demo**: four seeded accounts, one per role (`admin@clinicflow.dev`/
-`admin123`, `doctor@clinicflow.dev`/`doctor123`,
-`recepcao@clinicflow.dev`/`recepcao123`,
-`paciente@clinicflow.dev`/`paciente123`), log in and try the real flow, not
+`Admin@Flow2026!`, `doctor@clinicflow.dev`/`Doctor@Flow2026!`,
+`recepcao@clinicflow.dev`/`Recepcao@Flow2026!`,
+`paciente@clinicflow.dev`/`Paciente@Flow2026!`), log in and try the real flow, not
 a screenshot of it. Only the procedure catalogue (a price list) is readable
 without logging in — every other read and write requires one of those four
 logins, scoped by role — see [Authentication](#authentication).
@@ -265,7 +265,7 @@ read or write, needs a valid JWT with the right role.
 ```bash
 curl -X POST https://clinic-flow.onrender.com/v1/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email": "admin@clinicflow.dev", "password": "admin123"}'
+  -d '{"email": "admin@clinicflow.dev", "password": "Admin@Flow2026!"}'
 # {"token": "eyJ...", "expiresInSeconds": 900, "role": "ADMIN",
 #  "refreshToken": "...", "refreshExpiresInSeconds": 604800}
 
@@ -281,15 +281,16 @@ revokes one outright. See `RefreshTokenService`'s own javadoc for why reuse
 of an already-rotated refresh token fails rather than minting endless
 tokens off one compromised value.
 
-Four seeded accounts (`admin@clinicflow.dev`/`admin123`,
-`doctor@clinicflow.dev`/`doctor123`, `recepcao@clinicflow.dev`/
-`recepcao123`, `paciente@clinicflow.dev`/`paciente123` — the last one
+Four seeded accounts (`admin@clinicflow.dev`/`Admin@Flow2026!`,
+`doctor@clinicflow.dev`/`Doctor@Flow2026!`, `recepcao@clinicflow.dev`/
+`Recepcao@Flow2026!`, `paciente@clinicflow.dev`/`Paciente@Flow2026!` — the last one
 linked to an actual patient row via `User.patientId`) exist so a public
 demo login is possible from the first deploy — real bcrypt hashes, real
 JWTs, the passwords simply published, the same as any other public demo
 login. A signed-in user can change their own password via `PUT
 /v1/auth/password` (current + new password, the new one checked against
-`PasswordPolicy`: 10+ characters, upper, lower, digit, special) — the
+`PasswordPolicy`: 12+ characters, upper, lower, digit, special, and not
+found in a known breach per the Have I Been Pwned range API) — the
 seeded passwords themselves stay as published; nothing forces them to
 rotate. This is a deliberate change of shape from the project's earlier
 pitch ("anyone can write anonymously"): a public sandbox still needs *some*

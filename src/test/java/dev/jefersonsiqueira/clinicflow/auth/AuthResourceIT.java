@@ -40,7 +40,7 @@ class AuthResourceIT {
     given()
         .contentType(ContentType.JSON)
         .body("""
-            {"email": "admin@clinicflow.dev", "password": "admin123"}
+            {"email": "admin@clinicflow.dev", "password": "Admin@Flow2026!"}
             """)
         .when()
         .post("/v1/auth/login")
@@ -55,7 +55,7 @@ class AuthResourceIT {
     given()
         .contentType(ContentType.JSON)
         .body("""
-            {"email": "Admin@ClinicFlow.Dev", "password": "admin123"}
+            {"email": "Admin@ClinicFlow.Dev", "password": "Admin@Flow2026!"}
             """)
         .when()
         .post("/v1/auth/login")
@@ -69,7 +69,7 @@ class AuthResourceIT {
     given()
         .contentType(ContentType.JSON)
         .body("""
-            {"email": "not-an-email", "password": "admin123"}
+            {"email": "not-an-email", "password": "Admin@Flow2026!"}
             """)
         .when()
         .post("/v1/auth/login")
@@ -117,7 +117,7 @@ class AuthResourceIT {
         given()
             .contentType(ContentType.JSON)
             .body("""
-                {"email": "admin@clinicflow.dev", "password": "admin123"}
+                {"email": "admin@clinicflow.dev", "password": "Admin@Flow2026!"}
                 """)
             .post("/v1/auth/login")
             .jsonPath()
@@ -141,7 +141,7 @@ class AuthResourceIT {
         given()
             .contentType(ContentType.JSON)
             .body("""
-                {"email": "doctor@clinicflow.dev", "password": "doctor123"}
+                {"email": "doctor@clinicflow.dev", "password": "Doctor@Flow2026!"}
                 """)
             .post("/v1/auth/login")
             .jsonPath()
@@ -151,7 +151,7 @@ class AuthResourceIT {
         .header("Authorization", "Bearer " + token)
         .contentType(ContentType.JSON)
         .body("""
-            {"currentPassword": "doctor123", "newPassword": "NewPass!2026"}
+            {"currentPassword": "Doctor@Flow2026!", "newPassword": "NewPass!2026"}
             """)
         .when()
         .put("/v1/auth/password")
@@ -181,7 +181,7 @@ class AuthResourceIT {
     given()
         .contentType(ContentType.JSON)
         .body("""
-            {"email": "admin@clinicflow.dev", "password": "admin123"}
+            {"email": "admin@clinicflow.dev", "password": "Admin@Flow2026!"}
             """)
         .when()
         .post("/v1/auth/login")
@@ -197,7 +197,7 @@ class AuthResourceIT {
         given()
             .contentType(ContentType.JSON)
             .body("""
-                {"email": "admin@clinicflow.dev", "password": "admin123"}
+                {"email": "admin@clinicflow.dev", "password": "Admin@Flow2026!"}
                 """)
             .post("/v1/auth/login")
             .jsonPath()
@@ -221,7 +221,7 @@ class AuthResourceIT {
         given()
             .contentType(ContentType.JSON)
             .body("""
-                {"email": "admin@clinicflow.dev", "password": "admin123"}
+                {"email": "admin@clinicflow.dev", "password": "Admin@Flow2026!"}
                 """)
             .post("/v1/auth/login")
             .jsonPath()
@@ -262,7 +262,7 @@ class AuthResourceIT {
         given()
             .contentType(ContentType.JSON)
             .body("""
-                {"email": "admin@clinicflow.dev", "password": "admin123"}
+                {"email": "admin@clinicflow.dev", "password": "Admin@Flow2026!"}
                 """)
             .post("/v1/auth/login")
             .jsonPath()
@@ -291,7 +291,7 @@ class AuthResourceIT {
         given()
             .contentType(ContentType.JSON)
             .body("""
-                {"email": "admin@clinicflow.dev", "password": "admin123"}
+                {"email": "admin@clinicflow.dev", "password": "Admin@Flow2026!"}
                 """)
             .post("/v1/auth/login")
             .jsonPath()
@@ -308,7 +308,7 @@ class AuthResourceIT {
         given()
             .contentType(ContentType.JSON)
             .body("""
-                {"email": "admin@clinicflow.dev", "password": "admin123"}
+                {"email": "admin@clinicflow.dev", "password": "Admin@Flow2026!"}
                 """)
             .post("/v1/auth/login")
             .jsonPath()
@@ -318,7 +318,7 @@ class AuthResourceIT {
         .header("Authorization", "Bearer " + token)
         .contentType(ContentType.JSON)
         .body("""
-            {"currentPassword": "admin123", "newPassword": "alllowercase"}
+            {"currentPassword": "Admin@Flow2026!", "newPassword": "alllowercase"}
             """)
         .when()
         .put("/v1/auth/password")
@@ -333,7 +333,7 @@ class AuthResourceIT {
         given()
             .contentType(ContentType.JSON)
             .body("""
-                {"email": "admin@clinicflow.dev", "password": "admin123"}
+                {"email": "admin@clinicflow.dev", "password": "Admin@Flow2026!"}
                 """)
             .post("/v1/auth/login")
             .jsonPath()
@@ -344,7 +344,7 @@ class AuthResourceIT {
         .header("Authorization", "Bearer " + token)
         .contentType(ContentType.JSON)
         .body("""
-            {"currentPassword": "admin123", "newPassword": "Sh0rt!Passx"}
+            {"currentPassword": "Admin@Flow2026!", "newPassword": "Sh0rt!Passx"}
             """)
         .when()
         .put("/v1/auth/password")
@@ -376,7 +376,7 @@ class AuthResourceIT {
         given()
             .contentType(ContentType.JSON)
             .body("""
-                {"email": "doctor@clinicflow.dev", "password": "doctor123"}
+                {"email": "doctor@clinicflow.dev", "password": "Doctor@Flow2026!"}
                 """)
             .post("/v1/auth/login")
             .jsonPath()
@@ -386,7 +386,7 @@ class AuthResourceIT {
         .header("Authorization", "Bearer " + token)
         .contentType(ContentType.JSON)
         .body("""
-            {"currentPassword": "doctor123", "newPassword": "Correct!Horse99"}
+            {"currentPassword": "Doctor@Flow2026!", "newPassword": "Correct!Horse99"}
             """)
         .when()
         .put("/v1/auth/password")
