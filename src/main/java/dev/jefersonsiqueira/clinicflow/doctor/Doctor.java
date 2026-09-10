@@ -45,4 +45,8 @@ public class Doctor extends PanacheEntityBase {
 
   @Column(name = "created_at", nullable = false)
   public Instant createdAt;
+
+  /** Optional, same as {@code Patient.phone} — the two entities had drifted on this for no reason. */
+  @Column(name = "phone")
+  public String phone;
 }

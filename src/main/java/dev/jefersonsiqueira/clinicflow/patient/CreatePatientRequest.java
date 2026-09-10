@@ -26,6 +26,8 @@ public record CreatePatientRequest(
     String phone,
     @Past LocalDate birthDate,
     @NotBlank String postcode,
+    @NotBlank String houseNumber,
+    String complement,
     String socialName,
     String motherName,
     Sex sex,

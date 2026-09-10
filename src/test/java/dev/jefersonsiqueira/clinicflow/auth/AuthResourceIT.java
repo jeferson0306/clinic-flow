@@ -3,9 +3,14 @@ package dev.jefersonsiqueira.clinicflow.auth;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.when;
 
+import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
+import org.eclipse.microprofile.rest.client.inject.RestClient;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -14,9 +19,21 @@ import org.junit.jupiter.api.Test;
  * protected endpoint. No {@code @TestSecurity} anywhere in this class: that
  * is for tests that only need *a* valid principal to exercise business
  * logic, and this class is the one place login itself is what is on trial.
+ *
+ * {@link PwnedPasswordChecker} is mocked, same reasoning as brdoc/ViaCEP
+ * elsewhere in this suite: a CI run should never depend on a third-party
+ * free service being reachable. An empty range response means "no match
+ * found" — every password below is treated as not breached.
  */
 @QuarkusTest
 class AuthResourceIT {
+
+  @InjectMock @RestClient PwnedPasswordChecker pwnedPasswords;
+
+  @BeforeEach
+  void noKnownBreachesByDefault() {
+    when(pwnedPasswords.range(anyString())).thenReturn("");
+  }
 
   @Test
   void logsInWithTheSeededAdminAccount() {
@@ -308,5 +325,74 @@ class AuthResourceIT {
         .then()
         .statusCode(422)
         .body("field", is("newPassword"));
+  }
+
+  @Test
+  void rejectsAPasswordShorterThanTwelveCharsEvenIfWellComposed() {
+    String token =
+        given()
+            .contentType(ContentType.JSON)
+            .body("""
+                {"email": "admin@clinicflow.dev", "password": "admin123"}
+                """)
+            .post("/v1/auth/login")
+            .jsonPath()
+            .getString("token");
+
+    // 11 characters, every class present — length is the one thing wrong.
+    given()
+        .header("Authorization", "Bearer " + token)
+        .contentType(ContentType.JSON)
+        .body("""
+            {"currentPassword": "admin123", "newPassword": "Sh0rt!Passx"}
+            """)
+        .when()
+        .put("/v1/auth/password")
+        .then()
+        .statusCode(422)
+        .body("field", is("newPassword"))
+        .body("message", org.hamcrest.Matchers.containsString("12 characters"));
+  }
+
+  @Test
+  void rejectsAPasswordFoundInAKnownBreach() {
+    when(pwnedPasswords.range(anyString()))
+        .thenAnswer(inv -> {
+          // The real suffix for SHA-1("Correct!Horse99") is irrelevant here —
+          // this stub just has to answer with *some* line whose suffix
+          // matches what PasswordPolicy computes, proving the match logic
+          // itself works regardless of which password triggers it.
+          String password = "Correct!Horse99";
+          java.security.MessageDigest sha1 = java.security.MessageDigest.getInstance("SHA-1");
+          byte[] digest = sha1.digest(password.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+          StringBuilder hex = new StringBuilder();
+          for (byte b : digest) {
+            hex.append(String.format("%02X", b));
+          }
+          return hex.substring(5) + ":42";
+        });
+
+    String token =
+        given()
+            .contentType(ContentType.JSON)
+            .body("""
+                {"email": "doctor@clinicflow.dev", "password": "doctor123"}
+                """)
+            .post("/v1/auth/login")
+            .jsonPath()
+            .getString("token");
+
+    given()
+        .header("Authorization", "Bearer " + token)
+        .contentType(ContentType.JSON)
+        .body("""
+            {"currentPassword": "doctor123", "newPassword": "Correct!Horse99"}
+            """)
+        .when()
+        .put("/v1/auth/password")
+        .then()
+        .statusCode(422)
+        .body("field", is("newPassword"))
+        .body("message", org.hamcrest.Matchers.containsString("data breach"));
   }
 }

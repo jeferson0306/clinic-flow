@@ -32,11 +32,15 @@ public class DoctorService {
     }
 
     String email = documentValidator.email(request.email());
+    String phone = request.phone() == null || request.phone().isBlank()
+        ? null
+        : documentValidator.telephone(request.phone());
 
     Doctor doctor = new Doctor();
     doctor.fullName = request.fullName().trim();
     doctor.cpf = cpf;
     doctor.email = email;
+    doctor.phone = phone;
     doctor.specialty = request.specialty().trim();
     doctor.licenseNumber = licenseNumber;
     doctor.createdAt = Instant.now();
@@ -62,9 +66,13 @@ public class DoctorService {
       throw new DuplicateDoctorException("licence number");
     }
     String email = documentValidator.email(request.email());
+    String phone = request.phone() == null || request.phone().isBlank()
+        ? null
+        : documentValidator.telephone(request.phone());
 
     doctor.fullName = request.fullName().trim();
     doctor.email = email;
+    doctor.phone = phone;
     doctor.specialty = request.specialty().trim();
     doctor.licenseNumber = licenseNumber;
     return doctor;

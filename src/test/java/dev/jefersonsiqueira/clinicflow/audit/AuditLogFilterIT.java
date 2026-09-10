@@ -74,7 +74,7 @@ class AuditLogFilterIT {
         .contentType(ContentType.JSON)
         .body(
             """
-            {"fullName":"Auditada Silva","cpf":"123.456.789-09","email":"auditada@example.com","postcode":"01310-200"}
+            {"fullName":"Auditada Silva","cpf":"123.456.789-09","email":"auditada@example.com","postcode":"01310-200","houseNumber":"123"}
             """)
         .when()
         .post("/v1/patients")

@@ -38,6 +38,8 @@ public class PatientService {
         ? null
         : documentValidator.telephone(request.phone());
     Address address = addressLookup.resolve(request.postcode());
+    address.houseNumber = request.houseNumber().trim();
+    address.complement = blankToNull(request.complement());
 
     Patient patient = new Patient();
     patient.fullName = request.fullName().trim();
@@ -116,6 +118,8 @@ public class PatientService {
         ? null
         : documentValidator.telephone(request.phone());
     Address address = addressLookup.resolve(request.postcode());
+    address.houseNumber = request.houseNumber().trim();
+    address.complement = blankToNull(request.complement());
 
     // guardianCpf comes back masked in every response (PatientResponse), so
     // a client resubmitting a form it never touched can't round-trip it

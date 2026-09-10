@@ -54,7 +54,7 @@ class CalendarResourceIT {
             .contentType(ContentType.JSON)
             .body(
                 """
-                {"fullName":"Ana Souza","cpf":"%s","email":"ana@example.com","postcode":"01310-200"}
+                {"fullName":"Ana Souza","cpf":"%s","email":"ana@example.com","postcode":"01310-200","houseNumber":"123"}
                 """.formatted(unique("")))
             .post("/v1/patients")
             .jsonPath()

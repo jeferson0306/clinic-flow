@@ -66,7 +66,7 @@ class PatientResourceIT {
         .contentType(ContentType.JSON)
         .body(
             """
-            {"fullName":"Ana Souza","cpf":"529.982.247-25","email":"ana@example.com","postcode":"01310-200"}
+            {"fullName":"Ana Souza","cpf":"529.982.247-25","email":"ana@example.com","postcode":"01310-200","houseNumber":"123"}
             """)
         .when()
         .post("/v1/patients")
@@ -75,6 +75,21 @@ class PatientResourceIT {
         .body("maskedCpf", endsWith("25"))
         .body("maskedCpf", is("*********25"))
         .body("address.city", is("São Paulo"));
+  }
+
+  @Test
+  void rejectsARegistrationMissingTheHouseNumber() {
+    given()
+        .contentType(ContentType.JSON)
+        .body(
+            """
+            {"fullName":"Ana Souza","cpf":"529.982.247-25","email":"ana@example.com","postcode":"01310-200"}
+            """)
+        .when()
+        .post("/v1/patients")
+        .then()
+        .statusCode(422)
+        .body("field", is("houseNumber"));
   }
 
   private static Response ok(BrdocValidationResponse body) {
@@ -95,7 +110,7 @@ class PatientResourceIT {
         .contentType(ContentType.JSON)
         .body(
             """
-            {"fullName":"Ana Souza","cpf":"111.111.111-11","email":"ana@example.com","postcode":"01310-200"}
+            {"fullName":"Ana Souza","cpf":"111.111.111-11","email":"ana@example.com","postcode":"01310-200","houseNumber":"123"}
             """)
         .when()
         .post("/v1/patients")
@@ -111,7 +126,7 @@ class PatientResourceIT {
             .contentType(ContentType.JSON)
             .body(
                 """
-                {"fullName":"Carla Dias","cpf":"701.919.410-05","email":"carla@example.com","postcode":"01310-200"}
+                {"fullName":"Carla Dias","cpf":"701.919.410-05","email":"carla@example.com","postcode":"01310-200","houseNumber":"123"}
                 """)
             .when()
             .post("/v1/patients")
@@ -124,7 +139,7 @@ class PatientResourceIT {
         .contentType(ContentType.JSON)
         .body(
             """
-            {"fullName":"Carla Dias Souza","email":"carla.souza@example.com","postcode":"01310-200"}
+            {"fullName":"Carla Dias Souza","email":"carla.souza@example.com","postcode":"01310-200","houseNumber":"123"}
             """)
         .when()
         .put("/v1/patients/" + id)
@@ -143,7 +158,7 @@ class PatientResourceIT {
             .body(
                 """
                 {"fullName":"Joaozinho Silva","cpf":"135.792.468-28","email":"joao3@example.com",
-                 "postcode":"01310-200","birthDate":"2015-01-01",
+                 "postcode":"01310-200","houseNumber":"123","birthDate":"2015-01-01",
                  "guardianName":"Maria Silva","guardianCpf":"529.982.247-25","guardianRelationship":"MAE"}
                 """)
             .when()
@@ -159,7 +174,7 @@ class PatientResourceIT {
         .contentType(ContentType.JSON)
         .body(
             """
-            {"fullName":"Joaozinho Silva","email":"joao3b@example.com","postcode":"01310-200",
+            {"fullName":"Joaozinho Silva","email":"joao3b@example.com","postcode":"01310-200","houseNumber":"123",
              "birthDate":"2015-01-01","guardianName":"Maria Silva","guardianRelationship":"MAE"}
             """)
         .when()
@@ -176,7 +191,7 @@ class PatientResourceIT {
         .body(
             """
             {"fullName":"Bad Enum","cpf":"987.654.321-00","email":"badenum@example.com",
-             "postcode":"01310-200","sex":"NOT_A_REAL_VALUE"}
+             "postcode":"01310-200","houseNumber":"123","sex":"NOT_A_REAL_VALUE"}
             """)
         .when()
         .post("/v1/patients")
@@ -193,7 +208,7 @@ class PatientResourceIT {
             .contentType(ContentType.JSON)
             .body(
                 """
-                {"fullName":"Deletable Patient","cpf":"216.508.510-08","email":"del@example.com","postcode":"01310-200"}
+                {"fullName":"Deletable Patient","cpf":"216.508.510-08","email":"del@example.com","postcode":"01310-200","houseNumber":"123"}
                 """)
             .when()
             .post("/v1/patients")
@@ -212,7 +227,7 @@ class PatientResourceIT {
         .contentType(ContentType.JSON)
         .body(
             """
-            {"fullName":"Ana Souza","cpf":"390.533.447-05","email":"ana2@example.com","postcode":"01310-200"}
+            {"fullName":"Ana Souza","cpf":"390.533.447-05","email":"ana2@example.com","postcode":"01310-200","houseNumber":"123"}
             """)
         .when()
         .post("/v1/patients")
@@ -228,7 +243,7 @@ class PatientResourceIT {
         .body(
             """
             {"fullName":"Joaozinho Silva","cpf":"398.532.130-05","email":"joao@example.com",
-             "postcode":"01310-200","birthDate":"2015-01-01"}
+             "postcode":"01310-200","houseNumber":"123","birthDate":"2015-01-01"}
             """)
         .when()
         .post("/v1/patients")
@@ -244,7 +259,7 @@ class PatientResourceIT {
         .body(
             """
             {"fullName":"Joaozinho Silva","cpf":"398.532.130-05","email":"joao2@example.com",
-             "postcode":"01310-200","birthDate":"2015-01-01",
+             "postcode":"01310-200","houseNumber":"123","birthDate":"2015-01-01",
              "guardianName":"Maria Silva","guardianCpf":"529.982.247-25","guardianRelationship":"MAE"}
             """)
         .when()
@@ -264,7 +279,7 @@ class PatientResourceIT {
         .contentType(ContentType.JSON)
         .body(
             """
-            {"fullName":"Bruno Lima","cpf":"111.444.777-35","email":"bruno@example.com","postcode":"01310-200"}
+            {"fullName":"Bruno Lima","cpf":"111.444.777-35","email":"bruno@example.com","postcode":"01310-200","houseNumber":"123"}
             """)
         .when()
         .post("/v1/patients")

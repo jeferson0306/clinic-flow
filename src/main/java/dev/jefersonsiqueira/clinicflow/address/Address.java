@@ -31,6 +31,19 @@ public class Address {
   @Column(name = "ibge_code", length = 7)
   public String ibgeCode;
 
+  /**
+   * Neither of these two is derivable from the postcode — ViaCEP resolves a
+   * street, not which building on it, so both come from the caller, not
+   * {@link AddressLookupService}. {@code houseNumber} is still required:
+   * an address with a street but no number is not a complete one, even
+   * though it looks complete once ViaCEP fills the rest in automatically.
+   */
+  @Column(name = "house_number")
+  public String houseNumber;
+
+  @Column(name = "complement")
+  public String complement;
+
   public static Address unresolved(String postcode) {
     Address address = new Address();
     address.postcode = postcode;

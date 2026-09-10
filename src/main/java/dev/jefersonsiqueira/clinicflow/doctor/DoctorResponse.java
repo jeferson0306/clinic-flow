@@ -10,6 +10,7 @@ public record DoctorResponse(
     String fullName,
     String maskedCpf,
     String email,
+    String phone,
     String specialty,
     String licenseNumber,
     Instant createdAt) {
@@ -20,6 +21,7 @@ public record DoctorResponse(
         doctor.fullName,
         DocumentMasking.maskCpf(doctor.cpf),
         doctor.email,
+        doctor.phone,
         doctor.specialty,
         doctor.licenseNumber,
         doctor.createdAt);

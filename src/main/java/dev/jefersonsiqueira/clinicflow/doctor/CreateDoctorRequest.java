@@ -12,5 +12,6 @@ public record CreateDoctorRequest(
     @NotBlank @Pattern(regexp = NamePattern.REGEXP, message = NamePattern.MESSAGE) String fullName,
     @NotBlank String cpf,
     @NotBlank String email,
+    String phone,
     @NotBlank String specialty,
     @NotBlank String licenseNumber) {}

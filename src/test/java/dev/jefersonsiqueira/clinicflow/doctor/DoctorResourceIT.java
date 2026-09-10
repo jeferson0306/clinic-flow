@@ -33,6 +33,8 @@ class DoctorResourceIT {
             true, ((String) inv.getArgument(0)).replaceAll("\\D", ""), "Valid CPF format", null)));
     when(brdoc.validateEmail(anyString()))
         .thenAnswer(inv -> ok(new BrdocValidationResponse(true, inv.getArgument(0), "Valid email", null)));
+    when(brdoc.validateTelephone(anyString()))
+        .thenAnswer(inv -> ok(new BrdocValidationResponse(true, inv.getArgument(0), "Valid phone", null)));
   }
 
   private static Response ok(BrdocValidationResponse body) {
@@ -54,6 +56,21 @@ class DoctorResourceIT {
         .body("maskedCpf", is("*********25"))
         // Uppercased on the way in, so "sp" is stored and returned as "SP".
         .body("licenseNumber", is("12345-SP"));
+  }
+
+  @Test
+  void registersADoctorWithAnOptionalPhoneAndReturnsIt() {
+    given()
+        .contentType(ContentType.JSON)
+        .body(
+            """
+            {"fullName":"Dr. Rita Prado","cpf":"864.354.870-05","email":"rita@example.com","specialty":"Pediatrics","licenseNumber":"66666-SP","phone":"(11) 98888-7777"}
+            """)
+        .when()
+        .post("/v1/doctors")
+        .then()
+        .statusCode(201)
+        .body("phone", is("(11) 98888-7777"));
   }
 
   @Test
