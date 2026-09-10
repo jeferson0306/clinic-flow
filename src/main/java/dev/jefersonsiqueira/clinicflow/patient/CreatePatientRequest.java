@@ -23,6 +23,15 @@ import java.time.LocalDate;
  * {@code socialName} down stays genuinely optional clinical/legal-guardian
  * data, filled in progressively over a patient's actual visits rather than
  * all at intake.
+ *
+ * {@code street}, {@code city} and {@code state} are required inputs too,
+ * not fields {@link dev.jefersonsiqueira.clinicflow.address.AddressLookupService}
+ * derives on its own anymore: ViaCEP is a courtesy that pre-fills them in
+ * the caller's own form, but the caller always sends the final value, typed
+ * or accepted from the lookup. That is what makes a real address possible
+ * even when the postcode is new, rural, or ViaCEP is simply down — the
+ * previous design left the whole address null in exactly that case.
+ * {@code district} stays optional; not every postcode has a formal bairro.
  */
 @RequiresGuardianIfMinor
 public record CreatePatientRequest(
@@ -34,6 +43,10 @@ public record CreatePatientRequest(
     @NotBlank String postcode,
     @NotBlank String houseNumber,
     String complement,
+    @NotBlank String street,
+    String district,
+    @NotBlank String city,
+    @NotBlank @Pattern(regexp = "^[A-Za-z]{2}$", message = "must be a 2-letter state code") String state,
     String socialName,
     String motherName,
     Sex sex,

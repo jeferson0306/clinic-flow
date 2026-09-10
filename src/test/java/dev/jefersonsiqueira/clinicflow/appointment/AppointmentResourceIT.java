@@ -74,7 +74,7 @@ class AppointmentResourceIT {
             .contentType(ContentType.JSON)
             .body(
                 """
-                {"fullName":"Ana Souza","cpf":"%s","email":"ana@example.com","phone":"11987654321","birthDate":"1990-05-10","postcode":"01310-200","houseNumber":"123"}
+                {"fullName":"Ana Souza","cpf":"%s","email":"ana@example.com","phone":"11987654321","birthDate":"1990-05-10","postcode":"01310-200","houseNumber":"123","street":"Avenida Paulista","city":"Sao Paulo","state":"SP"}
                 """.formatted(patientCpf))
             .post("/v1/patients")
             .jsonPath()

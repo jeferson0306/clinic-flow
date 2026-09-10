@@ -78,7 +78,7 @@ class AuditLogFilterIT {
         .contentType(ContentType.JSON)
         .body(
             """
-            {"fullName":"Auditada Silva","cpf":"123.456.789-09","email":"auditada@example.com","phone":"11987654321","birthDate":"1990-05-10","postcode":"01310-200","houseNumber":"123"}
+            {"fullName":"Auditada Silva","cpf":"123.456.789-09","email":"auditada@example.com","phone":"11987654321","birthDate":"1990-05-10","postcode":"01310-200","houseNumber":"123","street":"Avenida Paulista","city":"Sao Paulo","state":"SP"}
             """)
         .when()
         .post("/v1/patients")

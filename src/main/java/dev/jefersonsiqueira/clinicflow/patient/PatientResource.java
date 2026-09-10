@@ -1,6 +1,8 @@
 package dev.jefersonsiqueira.clinicflow.patient;
 
+import dev.jefersonsiqueira.clinicflow.ratelimit.ClientAddressResolver;
 import io.smallrye.common.annotation.RunOnVirtualThread;
+import io.vertx.core.http.HttpServerRequest;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
@@ -12,8 +14,11 @@ import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.core.Context;
+import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.core.SecurityContext;
 import java.net.URI;
 import java.util.List;
 import java.util.UUID;
@@ -23,6 +28,7 @@ import org.eclipse.microprofile.openapi.annotations.media.ExampleObject;
 import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
+import org.eclipse.microprofile.jwt.JsonWebToken;
 
 @Path("/v1/patients")
 @Tag(name = "Patients")
@@ -36,6 +42,22 @@ import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 public class PatientResource {
 
   @Inject PatientService service;
+  @Inject JsonWebToken jwt;
+  @Inject ClientAddressResolver addressResolver;
+  @Context SecurityContext securityContext;
+  @Context HttpHeaders headers;
+  @Context HttpServerRequest vertxRequest;
+
+  /** Same derivation AuditLogFilter uses — kept here too because the CPF-change audit entry has to be written inside PatientService's own transaction, not from the filter that runs after it. */
+  private String callerIp() {
+    String cfConnectingIp = headers == null ? null : headers.getHeaderString("CF-Connecting-IP");
+    String remoteAddress = vertxRequest == null ? null : vertxRequest.remoteAddress().hostAddress();
+    return addressResolver.resolve(cfConnectingIp, remoteAddress);
+  }
+
+  private String callerRole() {
+    return jwt.getGroups() == null || jwt.getGroups().isEmpty() ? null : jwt.getGroups().iterator().next();
+  }
 
   @POST
   @RolesAllowed({"ADMIN", "RECEPCAO"})
@@ -45,12 +67,14 @@ public class PatientResource {
           """
           CPF, email and phone are validated and normalized through brdoc \
           before anything is stored — the CPF in the response is the normalized value, \
-          masked. The postcode is resolved to a street, district, city and state via \
-          ViaCEP; that lookup is a courtesy and never blocks registration if ViaCEP is \
-          slow or down (see AddressLookupService). phone and birthDate are required: \
-          a clinic cannot reschedule an appointment or deliver an exam result without a \
-          working phone number, and birthDate is what lets the guardian-for-a-minor \
-          check run at all (see RequiresGuardianIfMinor).""")
+          masked. street/city/state are required inputs, not ViaCEP-derived \
+          ones — the postcode lookup only pre-fills them and best-effort adds \
+          ibgeCode; a slow or down ViaCEP, or a postcode it has never heard \
+          of, never leaves the address incomplete (see AddressLookupService). \
+          phone and birthDate are required: a clinic cannot reschedule an \
+          appointment or deliver an exam result without a working phone \
+          number, and birthDate is what lets the guardian-for-a-minor check \
+          run at all (see RequiresGuardianIfMinor).""")
   @RequestBody(
       content =
           @Content(
@@ -67,7 +91,11 @@ public class PatientResource {
                           "phone": "+55 61 99194-6758",
                           "birthDate": "1990-05-10",
                           "postcode": "01310-200",
-                          "houseNumber": "123"
+                          "houseNumber": "123",
+                          "street": "Avenida Paulista",
+                          "district": "Bela Vista",
+                          "city": "Sao Paulo",
+                          "state": "SP"
                         }"""),
                 @ExampleObject(
                     name = "minor",
@@ -82,6 +110,9 @@ public class PatientResource {
                           "birthDate": "2015-01-01",
                           "postcode": "70040-010",
                           "houseNumber": "45",
+                          "street": "SQN 210",
+                          "city": "Brasilia",
+                          "state": "DF",
                           "guardianName": "Bruno Lima",
                           "guardianCpf": "701.919.410-05",
                           "guardianRelationship": "PAI",
@@ -145,14 +176,21 @@ public class PatientResource {
   // Unlike ProcedureResource's reads (a public price list), these carry real
   // PHI — full name, CPF, birth date, phone, address — so both list and
   // findById require a real session, not just PermitAll-by-omission.
+  //
+  // RECEPCAO gets PatientSummaryResponse, never PatientResponse: the
+  // clinical/guardian fields are not merely hidden by a UI, they never
+  // leave the server for that role. See PatientSummaryResponse's javadoc.
   @GET
   @RolesAllowed({"ADMIN", "DOCTOR", "RECEPCAO"})
   @Operation(
       summary = "List every patient",
-      description = "Newest first. No pagination — see PatientService.listAll's javadoc.")
+      description =
+          "Newest first. No pagination — see PatientService.listAll's javadoc. RECEPCAO "
+              + "receives PatientSummaryResponse (registration fields only); ADMIN and DOCTOR "
+              + "receive the full PatientResponse, clinical and guardian fields included.")
   @APIResponse(
       responseCode = "200",
-      description = "Every registered patient, CPF masked.",
+      description = "Every registered patient, CPF masked. Shape depends on the caller's role — see above.",
       content =
           @Content(
               examples =
@@ -178,17 +216,22 @@ public class PatientResource {
                               "createdAt": "2026-09-04T14:41:46.722547Z"
                             }
                           ]""")))
-  public List<PatientResponse> listAll() {
-    return service.listAll().stream().map(PatientResponse::from).toList();
+  public List<?> listAll() {
+    List<Patient> all = service.listAll();
+    return hasFullAccess()
+        ? all.stream().map(PatientResponse::from).toList()
+        : all.stream().map(PatientSummaryResponse::from).toList();
   }
 
   @GET
   @Path("/{id}")
   @RolesAllowed({"ADMIN", "DOCTOR", "RECEPCAO"})
-  @Operation(summary = "Fetch a patient by id")
+  @Operation(
+      summary = "Fetch a patient by id",
+      description = "RECEPCAO receives PatientSummaryResponse; ADMIN and DOCTOR receive the full PatientResponse.")
   @APIResponse(
       responseCode = "200",
-      description = "Patient found",
+      description = "Patient found. Shape depends on the caller's role — see above.",
       content =
           @Content(
               examples =
@@ -232,8 +275,13 @@ public class PatientResource {
                             "timestamp": "2026-09-04T18:47:41.112383Z",
                             "path": "/v1/patients/00000000-0000-0000-0000-000000000000"
                           }""")))
-  public PatientResponse findById(@PathParam("id") UUID id) {
-    return PatientResponse.from(service.findById(id));
+  public Object findById(@PathParam("id") UUID id) {
+    Patient patient = service.findById(id);
+    return hasFullAccess() ? PatientResponse.from(patient) : PatientSummaryResponse.from(patient);
+  }
+
+  private boolean hasFullAccess() {
+    return securityContext.isUserInRole("ADMIN") || securityContext.isUserInRole("DOCTOR");
   }
 
   @PUT
@@ -242,15 +290,20 @@ public class PatientResource {
   @Operation(
       summary = "Update a patient",
       description =
-          "No cpf field — see UpdatePatientRequest's javadoc for why. Email and, if given, "
-              + "phone are re-validated through brdoc; the postcode is re-resolved through ViaCEP.")
+          "cpf is optional — blank keeps the CPF on file; a different, valid CPF is a genuine "
+              + "correction (typo fixed at check-in, say) and requires cpfChangeReason, which is "
+              + "then written to the audit log alongside the masked old and new values. Email and "
+              + "phone are re-validated through brdoc; street/city/state are the caller's own "
+              + "values, not re-resolved from postcode (see CreatePatientRequest's javadoc).")
   @APIResponse(responseCode = "200", description = "Patient updated")
   @APIResponse(responseCode = "404", description = "No patient with this id")
   @APIResponse(
       responseCode = "422",
-      description = "brdoc rejected the email or phone. Same shape as register's own 422.")
+      description =
+          "brdoc rejected the email or phone, or cpf changed without a cpfChangeReason. Same shape as register's own 422.")
+  @APIResponse(responseCode = "409", description = "The new CPF already belongs to another patient.")
   public PatientResponse update(@PathParam("id") UUID id, @Valid UpdatePatientRequest request) {
-    return PatientResponse.from(service.update(id, request));
+    return PatientResponse.from(service.update(id, request, jwt.getName(), callerRole(), callerIp()));
   }
 
   @DELETE

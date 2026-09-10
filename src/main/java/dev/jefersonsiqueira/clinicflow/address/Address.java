@@ -43,10 +43,4 @@ public class Address {
 
   @Column(name = "complement")
   public String complement;
-
-  public static Address unresolved(String postcode) {
-    Address address = new Address();
-    address.postcode = postcode;
-    return address;
-  }
 }

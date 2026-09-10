@@ -76,14 +76,17 @@ class MeResourceIT {
         return;
       }
       em.createNativeQuery(
-              "insert into patients (id, full_name, cpf, email, phone, birth_date, created_at) "
-                  + "values (?1, ?2, ?3, ?4, ?5, ?6, now())")
+              "insert into patients (id, full_name, cpf, email, phone, birth_date, street, city, state, created_at) "
+                  + "values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, now())")
           .setParameter(1, patientId)
           .setParameter(2, fullName)
           .setParameter(3, id.replace("-", "").substring(0, 11))
           .setParameter(4, fullName.toLowerCase().replace(" ", ".") + "@example.com")
           .setParameter(5, "11987654321")
           .setParameter(6, java.time.LocalDate.of(1990, 5, 10))
+          .setParameter(7, "Avenida Paulista")
+          .setParameter(8, "Sao Paulo")
+          .setParameter(9, "SP")
           .executeUpdate();
     });
     return patientId;

@@ -7,6 +7,11 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 /**
+ * The full record, clinical and guardian fields included — returned to
+ * DOCTOR and ADMIN only. RECEPCAO gets {@link PatientSummaryResponse}
+ * instead; see {@link PatientResource} for the role check that decides
+ * which shape a given request receives.
+ *
  * The CPF comes back masked, keeping only the last two digits. This is a
  * public sandbox — anyone can register, and anyone with an id can fetch a
  * record back — and a full CPF is the one field here that identifies a real

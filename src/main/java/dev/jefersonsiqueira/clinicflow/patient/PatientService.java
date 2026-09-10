@@ -2,7 +2,11 @@ package dev.jefersonsiqueira.clinicflow.patient;
 
 import dev.jefersonsiqueira.clinicflow.address.Address;
 import dev.jefersonsiqueira.clinicflow.address.AddressLookupService;
+import dev.jefersonsiqueira.clinicflow.audit.AuditAction;
+import dev.jefersonsiqueira.clinicflow.audit.AuditLogService;
+import dev.jefersonsiqueira.clinicflow.common.DocumentMasking;
 import dev.jefersonsiqueira.clinicflow.common.ResourceInUseException;
+import dev.jefersonsiqueira.clinicflow.validation.brdoc.DocumentValidationException;
 import dev.jefersonsiqueira.clinicflow.validation.brdoc.DocumentValidator;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -22,6 +26,7 @@ public class PatientService {
   @Inject PatientRepository patients;
   @Inject DocumentValidator documentValidator;
   @Inject AddressLookupService addressLookup;
+  @Inject AuditLogService auditLog;
 
   @Transactional
   public Patient register(CreatePatientRequest request) {
@@ -35,7 +40,9 @@ public class PatientService {
 
     String email = documentValidator.email(request.email());
     String phone = documentValidator.telephone(request.phone());
-    Address address = addressLookup.resolve(request.postcode());
+    Address address = addressLookup.resolve(
+        request.postcode(), request.street().trim(), blankToNull(request.district()), request.city().trim(),
+        request.state().trim());
     address.houseNumber = request.houseNumber().trim();
     address.complement = blankToNull(request.complement());
 
@@ -108,12 +115,57 @@ public class PatientService {
     return patients.listAll(io.quarkus.panache.common.Sort.by("createdAt").descending());
   }
 
+  /**
+   * {@code actorEmail}/{@code actorRole}/{@code ipAddress} exist purely for
+   * the CPF-change audit entry below — see {@link
+   * dev.jefersonsiqueira.clinicflow.audit.AuditLogService#record(String,
+   * String, AuditAction, String, UUID, String, String)}'s own javadoc for
+   * why that write has to share this method's transaction rather than
+   * happen later in a response filter the way every other access-log entry
+   * does.
+   */
   @Transactional
-  public Patient update(UUID id, UpdatePatientRequest request) {
+  public Patient update(
+      UUID id, UpdatePatientRequest request, String actorEmail, String actorRole, String ipAddress) {
     Patient patient = findById(id);
+
+    // cpf is optional here the same way guardianCpf is: PatientResponse only
+    // ever returns a masked value, so a client resubmitting an untouched
+    // form has nothing real to send back. Blank means "keep the one on
+    // file"; a real, different value is a genuine correction, which needs a
+    // stated reason and leaves a trail — see RequiresGuardianIfMinor's
+    // sibling reasoning on UpdatePatientRequest for the same pattern.
+    if (request.cpf() != null && !request.cpf().isBlank()) {
+      String newCpf = documentValidator.cpf(request.cpf());
+      if (!newCpf.equals(patient.cpf)) {
+        if (request.cpfChangeReason() == null || request.cpfChangeReason().isBlank()) {
+          throw new DocumentValidationException(
+              "cpfChangeReason", "A reason is required when changing a patient's CPF");
+        }
+        if (patients.existsByCpfForAnotherPatient(newCpf, id)) {
+          throw new DuplicatePatientException();
+        }
+        auditLog.record(
+            actorEmail,
+            actorRole,
+            AuditAction.CPF_CHANGED,
+            "PATIENT",
+            id,
+            ipAddress,
+            "cpf %s -> %s; reason: %s"
+                .formatted(
+                    DocumentMasking.maskCpf(patient.cpf),
+                    DocumentMasking.maskCpf(newCpf),
+                    request.cpfChangeReason().trim()));
+        patient.cpf = newCpf;
+      }
+    }
+
     String email = documentValidator.email(request.email());
     String phone = documentValidator.telephone(request.phone());
-    Address address = addressLookup.resolve(request.postcode());
+    Address address = addressLookup.resolve(
+        request.postcode(), request.street().trim(), blankToNull(request.district()), request.city().trim(),
+        request.state().trim());
     address.houseNumber = request.houseNumber().trim();
     address.complement = blankToNull(request.complement());
 

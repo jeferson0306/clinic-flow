@@ -69,7 +69,7 @@ class PatientResourceIT {
         .contentType(ContentType.JSON)
         .body(
             """
-            {"fullName":"Ana Souza","cpf":"529.982.247-25","email":"ana@example.com","phone":"11987654321","birthDate":"1990-05-10","postcode":"01310-200","houseNumber":"123"}
+            {"fullName":"Ana Souza","cpf":"529.982.247-25","email":"ana@example.com","phone":"11987654321","birthDate":"1990-05-10","postcode":"01310-200","houseNumber":"123","street":"Avenida Paulista","city":"Sao Paulo","state":"SP"}
             """)
         .when()
         .post("/v1/patients")
@@ -77,7 +77,7 @@ class PatientResourceIT {
         .statusCode(201)
         .body("maskedCpf", endsWith("25"))
         .body("maskedCpf", is("*********25"))
-        .body("address.city", is("São Paulo"));
+        .body("address.city", is("Sao Paulo"));
   }
 
   @Test
@@ -86,7 +86,7 @@ class PatientResourceIT {
         .contentType(ContentType.JSON)
         .body(
             """
-            {"fullName":"Ana Souza","cpf":"529.982.247-25","email":"ana@example.com","phone":"11987654321","birthDate":"1990-05-10","postcode":"01310-200"}
+            {"fullName":"Ana Souza","cpf":"529.982.247-25","email":"ana@example.com","phone":"11987654321","birthDate":"1990-05-10","postcode":"01310-200","street":"Avenida Paulista","city":"Sao Paulo","state":"SP"}
             """)
         .when()
         .post("/v1/patients")
@@ -101,7 +101,7 @@ class PatientResourceIT {
         .contentType(ContentType.JSON)
         .body(
             """
-            {"fullName":"Ana Souza","cpf":"529.982.247-25","email":"ana@example.com","birthDate":"1990-05-10","postcode":"01310-200","houseNumber":"123"}
+            {"fullName":"Ana Souza","cpf":"529.982.247-25","email":"ana@example.com","birthDate":"1990-05-10","postcode":"01310-200","houseNumber":"123","street":"Avenida Paulista","city":"Sao Paulo","state":"SP"}
             """)
         .when()
         .post("/v1/patients")
@@ -116,7 +116,7 @@ class PatientResourceIT {
         .contentType(ContentType.JSON)
         .body(
             """
-            {"fullName":"Ana Souza","cpf":"529.982.247-25","email":"ana@example.com","phone":"11987654321","postcode":"01310-200","houseNumber":"123"}
+            {"fullName":"Ana Souza","cpf":"529.982.247-25","email":"ana@example.com","phone":"11987654321","postcode":"01310-200","houseNumber":"123","street":"Avenida Paulista","city":"Sao Paulo","state":"SP"}
             """)
         .when()
         .post("/v1/patients")
@@ -126,13 +126,149 @@ class PatientResourceIT {
   }
 
   @Test
+  void rejectsARegistrationMissingStreetCityOrState() {
+    given()
+        .contentType(ContentType.JSON)
+        .body(
+            """
+            {"fullName":"Ana Souza","cpf":"529.982.247-25","email":"ana@example.com","phone":"11987654321","birthDate":"1990-05-10","postcode":"01310-200","houseNumber":"123","city":"Sao Paulo","state":"SP"}
+            """)
+        .when()
+        .post("/v1/patients")
+        .then()
+        .statusCode(422)
+        .body("field", is("street"));
+  }
+
+  @Test
+  void updatesAPatientsCpfWithAReasonAndWritesAnAuditEntry() {
+    String id =
+        given()
+            .contentType(ContentType.JSON)
+            .body(
+                """
+                {"fullName":"Carlos Typo","cpf":"12345678901","email":"carlos@example.com","phone":"11987654321","birthDate":"1990-05-10","postcode":"01310-200","houseNumber":"123","street":"Avenida Paulista","city":"Sao Paulo","state":"SP"}
+                """)
+            .post("/v1/patients")
+            .jsonPath()
+            .getString("id");
+
+    given()
+        .contentType(ContentType.JSON)
+        .body(
+            """
+            {"fullName":"Carlos Typo","cpf":"23456789012","cpfChangeReason":"Digitado errado no check-in",
+             "email":"carlos@example.com","phone":"11987654321","birthDate":"1990-05-10",
+             "postcode":"01310-200","houseNumber":"123","street":"Avenida Paulista","city":"Sao Paulo","state":"SP"}
+            """)
+        .when()
+        .put("/v1/patients/" + id)
+        .then()
+        .statusCode(200)
+        .body("maskedCpf", is("*********12"));
+  }
+
+  @Test
+  void rejectsACpfChangeWithNoReason() {
+    String id =
+        given()
+            .contentType(ContentType.JSON)
+            .body(
+                """
+                {"fullName":"Delia Typo","cpf":"34567890123","email":"delia@example.com","phone":"11987654321","birthDate":"1990-05-10","postcode":"01310-200","houseNumber":"123","street":"Avenida Paulista","city":"Sao Paulo","state":"SP"}
+                """)
+            .post("/v1/patients")
+            .jsonPath()
+            .getString("id");
+
+    given()
+        .contentType(ContentType.JSON)
+        .body(
+            """
+            {"fullName":"Delia Typo","cpf":"45678901234",
+             "email":"delia@example.com","phone":"11987654321","birthDate":"1990-05-10",
+             "postcode":"01310-200","houseNumber":"123","street":"Avenida Paulista","city":"Sao Paulo","state":"SP"}
+            """)
+        .when()
+        .put("/v1/patients/" + id)
+        .then()
+        .statusCode(422)
+        .body("field", is("cpfChangeReason"));
+  }
+
+  @Test
+  void rejectsACpfChangeThatCollidesWithAnotherPatient() {
+    given()
+        .contentType(ContentType.JSON)
+        .body(
+            """
+            {"fullName":"First Patient","cpf":"56789012345","email":"first@example.com","phone":"11987654321","birthDate":"1990-05-10","postcode":"01310-200","houseNumber":"123","street":"Avenida Paulista","city":"Sao Paulo","state":"SP"}
+            """)
+        .post("/v1/patients")
+        .then()
+        .statusCode(201);
+
+    String secondId =
+        given()
+            .contentType(ContentType.JSON)
+            .body(
+                """
+                {"fullName":"Second Patient","cpf":"67890123456","email":"second@example.com","phone":"11987654321","birthDate":"1990-05-10","postcode":"01310-200","houseNumber":"123","street":"Avenida Paulista","city":"Sao Paulo","state":"SP"}
+                """)
+            .post("/v1/patients")
+            .jsonPath()
+            .getString("id");
+
+    given()
+        .contentType(ContentType.JSON)
+        .body(
+            """
+            {"fullName":"Second Patient","cpf":"56789012345","cpfChangeReason":"Trying to steal a CPF",
+             "email":"second@example.com","phone":"11987654321","birthDate":"1990-05-10",
+             "postcode":"01310-200","houseNumber":"123","street":"Avenida Paulista","city":"Sao Paulo","state":"SP"}
+            """)
+        .when()
+        .put("/v1/patients/" + secondId)
+        .then()
+        .statusCode(409)
+        .body("field", is("cpf"));
+  }
+
+  @Test
+  void leavesCpfUntouchedWhenTheFieldIsBlankOnUpdate() {
+    String id =
+        given()
+            .contentType(ContentType.JSON)
+            .body(
+                """
+                {"fullName":"Untouched Cpf","cpf":"78901234567","email":"untouched@example.com","phone":"11987654321","birthDate":"1990-05-10","postcode":"01310-200","houseNumber":"123","street":"Avenida Paulista","city":"Sao Paulo","state":"SP"}
+                """)
+            .post("/v1/patients")
+            .jsonPath()
+            .getString("id");
+
+    given()
+        .contentType(ContentType.JSON)
+        .body(
+            """
+            {"fullName":"Untouched Cpf Souza","email":"untouched@example.com","phone":"11987654321","birthDate":"1990-05-10",
+             "postcode":"01310-200","houseNumber":"123","street":"Avenida Paulista","city":"Sao Paulo","state":"SP"}
+            """)
+        .when()
+        .put("/v1/patients/" + id)
+        .then()
+        .statusCode(200)
+        .body("maskedCpf", is("*********67"));
+  }
+
+  @Test
   void rejectsAMinorPatientWithAGuardianOnRecordButNoGuardianPhone() {
     given()
         .contentType(ContentType.JSON)
         .body(
             """
             {"fullName":"Joaozinho Silva","cpf":"398.532.130-05","email":"joao@example.com","phone":"11987654321",
-             "postcode":"01310-200","houseNumber":"123","birthDate":"2015-01-01",
+             "postcode":"01310-200","houseNumber":"123","street":"Avenida Paulista","city":"Sao Paulo","state":"SP","birthDate":"2015-01-01",
              "guardianName":"Maria Silva","guardianCpf":"529.982.247-25","guardianRelationship":"MAE"}
             """)
         .when()
@@ -160,7 +296,7 @@ class PatientResourceIT {
         .contentType(ContentType.JSON)
         .body(
             """
-            {"fullName":"Ana Souza","cpf":"111.111.111-11","email":"ana@example.com","phone":"11987654321","birthDate":"1990-05-10","postcode":"01310-200","houseNumber":"123"}
+            {"fullName":"Ana Souza","cpf":"111.111.111-11","email":"ana@example.com","phone":"11987654321","birthDate":"1990-05-10","postcode":"01310-200","houseNumber":"123","street":"Avenida Paulista","city":"Sao Paulo","state":"SP"}
             """)
         .when()
         .post("/v1/patients")
@@ -176,7 +312,7 @@ class PatientResourceIT {
             .contentType(ContentType.JSON)
             .body(
                 """
-                {"fullName":"Carla Dias","cpf":"701.919.410-05","email":"carla@example.com","phone":"11987654321","birthDate":"1990-05-10","postcode":"01310-200","houseNumber":"123"}
+                {"fullName":"Carla Dias","cpf":"701.919.410-05","email":"carla@example.com","phone":"11987654321","birthDate":"1990-05-10","postcode":"01310-200","houseNumber":"123","street":"Avenida Paulista","city":"Sao Paulo","state":"SP"}
                 """)
             .when()
             .post("/v1/patients")
@@ -189,7 +325,7 @@ class PatientResourceIT {
         .contentType(ContentType.JSON)
         .body(
             """
-            {"fullName":"Carla Dias Souza","email":"carla.souza@example.com","phone":"11987654321","birthDate":"1990-05-10","postcode":"01310-200","houseNumber":"123"}
+            {"fullName":"Carla Dias Souza","email":"carla.souza@example.com","phone":"11987654321","birthDate":"1990-05-10","postcode":"01310-200","houseNumber":"123","street":"Avenida Paulista","city":"Sao Paulo","state":"SP"}
             """)
         .when()
         .put("/v1/patients/" + id)
@@ -208,7 +344,7 @@ class PatientResourceIT {
             .body(
                 """
                 {"fullName":"Joaozinho Silva","cpf":"135.792.468-28","email":"joao3@example.com","phone":"11987654321",
-                 "postcode":"01310-200","houseNumber":"123","birthDate":"2015-01-01",
+                 "postcode":"01310-200","houseNumber":"123","street":"Avenida Paulista","city":"Sao Paulo","state":"SP","birthDate":"2015-01-01",
                  "guardianName":"Maria Silva","guardianCpf":"529.982.247-25","guardianRelationship":"MAE",
                  "guardianPhone":"11912345678"}
                 """)
@@ -225,7 +361,7 @@ class PatientResourceIT {
         .contentType(ContentType.JSON)
         .body(
             """
-            {"fullName":"Joaozinho Silva","email":"joao3b@example.com","phone":"11987654321","postcode":"01310-200","houseNumber":"123",
+            {"fullName":"Joaozinho Silva","email":"joao3b@example.com","phone":"11987654321","postcode":"01310-200","houseNumber":"123","street":"Avenida Paulista","city":"Sao Paulo","state":"SP",
              "birthDate":"2015-01-01","guardianName":"Maria Silva","guardianRelationship":"MAE","guardianPhone":"11912345678"}
             """)
         .when()
@@ -242,7 +378,7 @@ class PatientResourceIT {
         .body(
             """
             {"fullName":"Bad Enum","cpf":"987.654.321-00","email":"badenum@example.com","phone":"11987654321","birthDate":"1990-05-10",
-             "postcode":"01310-200","houseNumber":"123","sex":"NOT_A_REAL_VALUE"}
+             "postcode":"01310-200","houseNumber":"123","street":"Avenida Paulista","city":"Sao Paulo","state":"SP","sex":"NOT_A_REAL_VALUE"}
             """)
         .when()
         .post("/v1/patients")
@@ -259,7 +395,7 @@ class PatientResourceIT {
             .contentType(ContentType.JSON)
             .body(
                 """
-                {"fullName":"Deletable Patient","cpf":"216.508.510-08","email":"del@example.com","phone":"11987654321","birthDate":"1990-05-10","postcode":"01310-200","houseNumber":"123"}
+                {"fullName":"Deletable Patient","cpf":"216.508.510-08","email":"del@example.com","phone":"11987654321","birthDate":"1990-05-10","postcode":"01310-200","houseNumber":"123","street":"Avenida Paulista","city":"Sao Paulo","state":"SP"}
                 """)
             .when()
             .post("/v1/patients")
@@ -278,7 +414,7 @@ class PatientResourceIT {
         .contentType(ContentType.JSON)
         .body(
             """
-            {"fullName":"Ana Souza","cpf":"390.533.447-05","email":"ana2@example.com","phone":"11987654321","birthDate":"1990-05-10","postcode":"01310-200","houseNumber":"123"}
+            {"fullName":"Ana Souza","cpf":"390.533.447-05","email":"ana2@example.com","phone":"11987654321","birthDate":"1990-05-10","postcode":"01310-200","houseNumber":"123","street":"Avenida Paulista","city":"Sao Paulo","state":"SP"}
             """)
         .when()
         .post("/v1/patients")
@@ -294,7 +430,7 @@ class PatientResourceIT {
         .body(
             """
             {"fullName":"Joaozinho Silva","cpf":"398.532.130-05","email":"joao@example.com","phone":"11987654321",
-             "postcode":"01310-200","houseNumber":"123","birthDate":"2015-01-01"}
+             "postcode":"01310-200","houseNumber":"123","street":"Avenida Paulista","city":"Sao Paulo","state":"SP","birthDate":"2015-01-01"}
             """)
         .when()
         .post("/v1/patients")
@@ -310,7 +446,7 @@ class PatientResourceIT {
         .body(
             """
             {"fullName":"Joaozinho Silva","cpf":"398.532.130-05","email":"joao2@example.com","phone":"11987654321",
-             "postcode":"01310-200","houseNumber":"123","birthDate":"2015-01-01",
+             "postcode":"01310-200","houseNumber":"123","street":"Avenida Paulista","city":"Sao Paulo","state":"SP","birthDate":"2015-01-01",
              "guardianName":"Maria Silva","guardianCpf":"529.982.247-25","guardianRelationship":"MAE",
              "guardianPhone":"11912345678"}
             """)
@@ -324,19 +460,23 @@ class PatientResourceIT {
   }
 
   @Test
-  void savesAPatientEvenWhenViaCepIsDown() {
+  void savesAPatientsOwnAddressEvenWhenViaCepIsDown() {
+    // street/city/state are the caller's own values now, not ViaCEP's — a
+    // down ViaCEP only costs the ibgeCode enrichment, never the address
+    // itself. See AddressLookupService's javadoc.
     when(viaCep.lookup(anyString())).thenThrow(new RuntimeException("connection refused"));
 
     given()
         .contentType(ContentType.JSON)
         .body(
             """
-            {"fullName":"Bruno Lima","cpf":"111.444.777-35","email":"bruno@example.com","phone":"11987654321","birthDate":"1990-05-10","postcode":"01310-200","houseNumber":"123"}
+            {"fullName":"Bruno Lima","cpf":"111.444.777-35","email":"bruno@example.com","phone":"11987654321","birthDate":"1990-05-10","postcode":"01310-200","houseNumber":"123","street":"Avenida Paulista","city":"Sao Paulo","state":"SP"}
             """)
         .when()
         .post("/v1/patients")
         .then()
         .statusCode(201)
-        .body("address.city", is((Object) null));
+        .body("address.city", is("Sao Paulo"))
+        .body("address.ibgeCode", is((Object) null));
   }
 }

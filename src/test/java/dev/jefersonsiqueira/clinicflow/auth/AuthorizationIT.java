@@ -119,6 +119,39 @@ class AuthorizationIT {
     given().when().get("/v1/doctors").then().statusCode(200);
   }
 
+  // Correction 1 (RECEPCAO/Prontuário isolation): the boundary is the
+  // response contract, not a hidden UI field — PatientSummaryResponse
+  // simply has no clinical or guardian properties for Jackson to write, so
+  // this asserts their absence from the JSON itself, not from a screen.
+  @Test
+  @TestSecurity(user = "front-desk", roles = "RECEPCAO")
+  void receptionGetsTheSummaryShapeWithNoClinicalFields() {
+    given()
+        .when()
+        .get("/v1/patients")
+        .then()
+        .statusCode(200)
+        .body("[0]", org.hamcrest.Matchers.not(org.hamcrest.Matchers.hasKey("birthDate")))
+        .body("[0]", org.hamcrest.Matchers.not(org.hamcrest.Matchers.hasKey("allergies")))
+        .body("[0]", org.hamcrest.Matchers.not(org.hamcrest.Matchers.hasKey("clinicalAlert")))
+        .body("[0]", org.hamcrest.Matchers.not(org.hamcrest.Matchers.hasKey("guardianName")))
+        .body("[0]", org.hamcrest.Matchers.hasKey("fullName"))
+        .body("[0]", org.hamcrest.Matchers.hasKey("phone"));
+  }
+
+  @Test
+  @TestSecurity(user = "a-doctor", roles = "DOCTOR")
+  void doctorGetsTheFullShapeWithClinicalFields() {
+    given()
+        .when()
+        .get("/v1/patients")
+        .then()
+        .statusCode(200)
+        .body("[0]", org.hamcrest.Matchers.hasKey("birthDate"))
+        .body("[0]", org.hamcrest.Matchers.hasKey("allergies"))
+        .body("[0]", org.hamcrest.Matchers.hasKey("clinicalAlert"));
+  }
+
   @Test
   @TestSecurity(user = "front-desk", roles = "RECEPCAO")
   void receptionCannotWriteADoctorOrAnExam() {

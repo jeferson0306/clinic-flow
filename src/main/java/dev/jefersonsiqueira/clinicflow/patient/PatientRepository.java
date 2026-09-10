@@ -16,4 +16,8 @@ public class PatientRepository implements PanacheRepositoryBase<Patient, UUID> {
   public boolean existsByCpf(String cpf) {
     return find("cpf", cpf).firstResultOptional().isPresent();
   }
+
+  public boolean existsByCpfForAnotherPatient(String cpf, UUID excludingId) {
+    return find("cpf = ?1 and id != ?2", cpf, excludingId).firstResultOptional().isPresent();
+  }
 }
